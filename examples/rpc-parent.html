@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RPC Parent - Type-Safe Method Calls</title>
+  <style>
+    body {
+      font-family: 'Monaco', 'Menlo', monospace;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #1e1e1e;
+      color: #d4d4d4;
+    }
+    h1 {
+      color: #4ec9b0;
+      border-bottom: 2px solid #4ec9b0;
+      padding-bottom: 10px;
+    }
+    .api-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: #252526;
+      border-radius: 8px;
+      border-left: 4px solid #007acc;
+    }
+    .api-section h3 {
+      color: #dcdcaa;
+      margin-top: 0;
+    }
+    button {
+      margin: 5px;
+      padding: 10px 20px;
+      font-size: 14px;
+      cursor: pointer;
+      background: #007acc;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-family: inherit;
+    }
+    button:hover {
+      background: #005a9e;
+    }
+    button:active {
+      background: #004578;
+    }
+    input {
+      padding: 8px;
+      margin: 5px;
+      background: #3c3c3c;
+      border: 1px solid #555;
+      color: #d4d4d4;
+      border-radius: 4px;
+      font-family: inherit;
+    }
+    #iframe-container {
+      margin-top: 20px;
+      border: 2px solid #007acc;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    iframe {
+      width: 100%;
+      height: 600px;
+      border: none;
+      background: white;
+    }
+    .log {
+      margin-top: 20px;
+      padding: 15px;
+      background: #1e1e1e;
+      border: 1px solid #555;
+      border-radius: 4px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-size: 12px;
+    }
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid #333;
+    }
+    .log-entry.call {
+      color: #4fc1ff;
+    }
+    .log-entry.response {
+      color: #4ec9b0;
+    }
+    .log-entry.error {
+      color: #f48771;
+    }
+    .type-info {
+      color: #9cdcfe;
+      font-style: italic;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🚀 RPC Parent - Type-Safe Method Calls</h1>
+
+  <div class="api-section">
+    <h3>📞 Call Child Methods</h3>
+    <div>
+      <button id="call-init">initialize(options)</button>
+      <button id="call-get-data">getData()</button>
+      <button id="call-render">render(data)</button>
+      <button id="call-destroy">destroy()</button>
+    </div>
+    <div class="type-info">
+      Type: ParentRPC&lt;ChildAPI, ParentAPI&gt;
+    </div>
+  </div>
+
+  <div class="api-section">
+    <h3>🎯 Exposed Parent Methods</h3>
+    <div class="type-info">
+      Child can call: updateConfig, requestData, notify
+    </div>
+  </div>
+
+  <div id="iframe-container">
+    <iframe id="child-iframe" src="/examples/rpc-child.html"></iframe>
+  </div>
+
+  <div class="log">
+    <h3>📋 RPC Call Log</h3>
+    <div id="log-content"></div>
+  </div>
+
+  <script type="module">
+    import { ParentRPC } from '../../dist/rpc.js'
+
+    // Define APIs with TypeScript-like interfaces
+    /**
+     * @typedef {Object} ChildAPI
+     * @property {(options: {width: number, height: number}) => Promise<void>} initialize
+     * @property {() => Promise<{status: string, items: any[]}>} getData
+     * @property {(data: {content: string, style?: any}) => void} render
+     * @property {() => Promise<void>} destroy
+     */
+
+    /**
+     * @typedef {Object} ParentAPI
+     * @property {(config: {theme: string, lang: string}) => void} updateConfig
+     * @property {(id: string) => Promise<{name: string, value: number}>} requestData
+     * @property {(message: string, level: 'info' | 'warn' | 'error') => void} notify
+     */
+
+    const iframe = document.getElementById('child-iframe')
+    const logContent = document.getElementById('log-content')
+
+    let rpc
+
+    function addLog(message, type = 'info') {
+      const entry = document.createElement('div')
+      entry.className = `log-entry ${type}`
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`
+      logContent.appendChild(entry)
+      logContent.scrollTop = logContent.scrollHeight
+    }
+
+    iframe.addEventListener('load', () => {
+      addLog('Iframe loaded, initializing RPC...', 'info')
+
+      // Create type-safe RPC communicator
+      rpc = new ParentRPC(iframe.contentWindow, {
+        targetOrigin: window.location.origin,
+        debug: true,
+      })
+
+      // Register methods that child can call
+      rpc.registerAll({
+        updateConfig: (config) => {
+          addLog(`📥 updateConfig called: ${JSON.stringify(config)}`, 'response')
+        },
+        requestData: async (id) => {
+          addLog(`📥 requestData called: ${id}`, 'response')
+          return {
+            name: `Data-${id}`,
+            value: Math.random() * 100,
+          }
+        },
+        notify: (message, level) => {
+          addLog(`🔔 notify: [${level}] ${message}`, 'response')
+        },
+      })
+
+      addLog('✅ RPC ready!', 'info')
+    })
+
+    // Call child methods
+    document.getElementById('call-init').addEventListener('click', async () => {
+      addLog('📞 Calling child.initialize...', 'call')
+      try {
+        await rpc.call('initialize', { width: 800, height: 600 })
+        addLog('✅ initialize completed', 'response')
+      } catch (error) {
+        addLog(`❌ Error: ${error.message}`, 'error')
+      }
+    })
+
+    document.getElementById('call-get-data').addEventListener('click', async () => {
+      addLog('📞 Calling child.getData...', 'call')
+      try {
+        const result = await rpc.call('getData')
+        addLog(`✅ getData result: ${JSON.stringify(result)}`, 'response')
+      } catch (error) {
+        addLog(`❌ Error: ${error.message}`, 'error')
+      }
+    })
+
+    document.getElementById('call-render').addEventListener('click', async () => {
+      addLog('📞 Calling child.render...', 'call')
+      try {
+        await rpc.call('render', {
+          content: `Rendered at ${new Date().toLocaleTimeString()}`,
+          style: { color: 'blue' },
+        })
+        addLog('✅ render completed', 'response')
+      } catch (error) {
+        addLog(`❌ Error: ${error.message}`, 'error')
+      }
+    })
+
+    document.getElementById('call-destroy').addEventListener('click', async () => {
+      addLog('📞 Calling child.destroy...', 'call')
+      try {
+        await rpc.call('destroy')
+        addLog('✅ destroy completed', 'response')
+      } catch (error) {
+        addLog(`❌ Error: ${error.message}`, 'error')
+      }
+    })
+  </script>
+</body>
+</html>
