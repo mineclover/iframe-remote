@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parent Page - iframe Remote Communication</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      color: #333;
+    }
+    .controls {
+      margin: 20px 0;
+      padding: 20px;
+      background: #f5f5f5;
+      border-radius: 8px;
+    }
+    .controls button {
+      margin: 5px;
+      padding: 10px 20px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .controls input {
+      padding: 8px;
+      margin: 5px;
+      width: 200px;
+    }
+    #iframe-container {
+      margin-top: 20px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    iframe {
+      width: 100%;
+      height: 600px;
+      border: none;
+    }
+    .log {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .log-entry.sent {
+      color: #0066cc;
+    }
+    .log-entry.received {
+      color: #009900;
+    }
+  </style>
+</head>
+<body>
+  <h1>Parent Page - iframe Communication Demo</h1>
+
+  <div class="controls">
+    <h3>Controls</h3>
+    <div>
+      <input type="text" id="message-input" placeholder="Enter message..." value="Hello from parent!">
+      <button id="send-btn">Send Message</button>
+    </div>
+    <div>
+      <button id="request-data-btn">Request Data</button>
+      <button id="clear-log-btn">Clear Log</button>
+    </div>
+  </div>
+
+  <div id="iframe-container">
+    <iframe id="child-iframe" src="/examples/child/index.html"></iframe>
+  </div>
+
+  <div class="log">
+    <h3>Communication Log</h3>
+    <div id="log-content"></div>
+  </div>
+
+  <script type="module">
+    import { ParentCommunicator } from '../../dist/parent.js'
+
+    const iframe = document.getElementById('child-iframe')
+    const messageInput = document.getElementById('message-input')
+    const logContent = document.getElementById('log-content')
+
+    let communicator
+
+    function addLog(message, type = 'info') {
+      const entry = document.createElement('div')
+      entry.className = `log-entry ${type}`
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`
+      logContent.appendChild(entry)
+      logContent.scrollTop = logContent.scrollHeight
+    }
+
+    iframe.addEventListener('load', () => {
+      addLog('Iframe loaded, initializing communicator...', 'info')
+
+      communicator = new ParentCommunicator(iframe.contentWindow, {
+        targetOrigin: window.location.origin,
+        onMessage: (data) => {
+          addLog(`Received: ${JSON.stringify(data)}`, 'received')
+        },
+        onError: (error) => {
+          addLog(`Error: ${error.message}`, 'error')
+        }
+      })
+
+      addLog('Communicator initialized', 'info')
+    })
+
+    document.getElementById('send-btn').addEventListener('click', () => {
+      const message = messageInput.value
+      if (communicator) {
+        communicator.send({ type: 'message', payload: message })
+        addLog(`Sent: ${message}`, 'sent')
+      }
+    })
+
+    document.getElementById('request-data-btn').addEventListener('click', async () => {
+      if (communicator) {
+        addLog('Requesting data...', 'sent')
+        try {
+          const response = await communicator.request({ type: 'getData' })
+          addLog(`Response: ${JSON.stringify(response)}`, 'received')
+        } catch (error) {
+          addLog(`Request failed: ${error.message}`, 'error')
+        }
+      }
+    })
+
+    document.getElementById('clear-log-btn').addEventListener('click', () => {
+      logContent.innerHTML = ''
+    })
+  </script>
+</body>
+</html>

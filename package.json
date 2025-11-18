@@ -1,0 +1,49 @@
+{
+  "name": "@packages/iframe-remote",
+  "version": "0.0.1",
+  "description": "Bidirectional iframe communication protocol implementation",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./parent": {
+      "types": "./dist/parent.d.ts",
+      "import": "./dist/parent.js"
+    },
+    "./child": {
+      "types": "./dist/child.d.ts",
+      "import": "./dist/child.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "serve": "npx serve . -p 3000 --no-clipboard --no-port-switching",
+    "test": "vitest run && playwright test",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:watch": "vitest",
+    "playwright:install": "playwright install --with-deps"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@vitest/browser": "^4.0.6",
+    "serve": "^14.2.5",
+    "typescript": "^5.0.0",
+    "vitest": "^4.0.6"
+  },
+  "keywords": [
+    "iframe",
+    "postMessage",
+    "communication",
+    "bidirectional",
+    "protocol"
+  ]
+}
