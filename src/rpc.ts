@@ -3,8 +3,6 @@
  * for iframe communication
  */
 
-import { ParentCommunicator } from './parent'
-import { ChildCommunicator } from './child'
 import type { CommunicatorOptions } from './types'
 import {
   RPCError,
@@ -32,7 +30,9 @@ export class ParentRPC<
   ChildAPI extends API = API,
   ParentAPI extends API = API
 > implements RPCCaller<ChildAPI>, RPCHandler<ParentAPI> {
-  private communicator: ParentCommunicator
+  private targetWindow: Window
+  private targetOrigin: string
+  private messageHandler: (event: MessageEvent) => void
   private handlers: Map<string, MethodHandler<ParentAPI, any>>
   private pendingCalls: Map<string, {
     resolve: (value: any) => void
@@ -44,16 +44,19 @@ export class ParentRPC<
     targetWindow: Window,
     options: CommunicatorOptions = {}
   ) {
+    this.targetWindow = targetWindow
+    this.targetOrigin = options.targetOrigin || '*'
     this.handlers = new Map()
     this.pendingCalls = new Map()
 
-    this.communicator = new ParentCommunicator(targetWindow, {
-      ...options,
-      onMessage: (data) => {
-        this.handleMessage(data)
-        options.onMessage?.(data)
-      },
-    })
+    this.messageHandler = (event: MessageEvent) => {
+      if (this.targetOrigin !== '*' && event.origin !== this.targetOrigin) return
+      if (event.source !== this.targetWindow) return
+      this.handleMessage(event.data)
+      options.onMessage?.(event.data)
+    }
+
+    window.addEventListener('message', this.messageHandler)
   }
 
   /**
@@ -106,7 +109,7 @@ export class ParentRPC<
         timestamp: Date.now(),
       }
 
-      this.communicator.send(message)
+      this.targetWindow.postMessage(message, this.targetOrigin)
     })
   }
 
@@ -215,7 +218,7 @@ export class ParentRPC<
       timestamp: Date.now(),
     }
 
-    this.communicator.send(response)
+    this.targetWindow.postMessage(response, this.targetOrigin)
   }
 
   /**
@@ -229,13 +232,13 @@ export class ParentRPC<
    * Clean up
    */
   public destroy(): void {
+    window.removeEventListener('message', this.messageHandler)
     this.handlers.clear()
     this.pendingCalls.forEach((pending) => {
       clearTimeout(pending.timeout)
       pending.reject(new RPCError('RPC destroyed'))
     })
     this.pendingCalls.clear()
-    this.communicator.destroy()
   }
 }
 
@@ -247,7 +250,9 @@ export class ChildRPC<
   ParentAPI extends API = API,
   ChildAPI extends API = API
 > implements RPCCaller<ParentAPI>, RPCHandler<ChildAPI> {
-  private communicator: ChildCommunicator
+  private parentWindow: Window
+  private targetOrigin: string
+  private messageHandler: (event: MessageEvent) => void
   private handlers: Map<string, MethodHandler<ChildAPI, any>>
   private pendingCalls: Map<string, {
     resolve: (value: any) => void
@@ -256,16 +261,23 @@ export class ChildRPC<
   }>
 
   constructor(options: CommunicatorOptions = {}) {
+    if (!window.parent || window.parent === window) {
+      throw new Error('ChildRPC must be used inside an iframe')
+    }
+
+    this.parentWindow = window.parent
+    this.targetOrigin = options.targetOrigin || '*'
     this.handlers = new Map()
     this.pendingCalls = new Map()
 
-    this.communicator = new ChildCommunicator({
-      ...options,
-      onMessage: (data) => {
-        this.handleMessage(data)
-        options.onMessage?.(data)
-      },
-    })
+    this.messageHandler = (event: MessageEvent) => {
+      if (this.targetOrigin !== '*' && event.origin !== this.targetOrigin) return
+      if (event.source !== this.parentWindow) return
+      this.handleMessage(event.data)
+      options.onMessage?.(event.data)
+    }
+
+    window.addEventListener('message', this.messageHandler)
   }
 
   /**
@@ -317,7 +329,7 @@ export class ChildRPC<
         timestamp: Date.now(),
       }
 
-      this.communicator.send(message)
+      this.parentWindow.postMessage(message, this.targetOrigin)
     })
   }
 
@@ -426,7 +438,7 @@ export class ChildRPC<
       timestamp: Date.now(),
     }
 
-    this.communicator.send(response)
+    this.parentWindow.postMessage(response, this.targetOrigin)
   }
 
   /**
@@ -440,12 +452,12 @@ export class ChildRPC<
    * Clean up
    */
   public destroy(): void {
+    window.removeEventListener('message', this.messageHandler)
     this.handlers.clear()
     this.pendingCalls.forEach((pending) => {
       clearTimeout(pending.timeout)
       pending.reject(new RPCError('RPC destroyed'))
     })
     this.pendingCalls.clear()
-    this.communicator.destroy()
   }
 }

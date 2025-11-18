@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Standalone Parent - Works with file://</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 { color: #333; }
+    .section {
+      margin: 20px 0;
+      padding: 20px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    button {
+      margin: 5px;
+      padding: 10px 20px;
+      font-size: 14px;
+      cursor: pointer;
+      background: #007acc;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+    button:hover { background: #005a9e; }
+    input {
+      padding: 8px;
+      margin: 5px;
+      width: 200px;
+    }
+    iframe {
+      width: 100%;
+      height: 400px;
+      border: 2px solid #ddd;
+      border-radius: 4px;
+    }
+    .log {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .log-entry { padding: 4px 0; border-bottom: 1px solid #eee; }
+    .log-entry.sent { color: #0066cc; }
+    .log-entry.received { color: #009900; }
+  </style>
+</head>
+<body>
+  <h1>🚀 Standalone Parent (file:// compatible)</h1>
+
+  <div class="section">
+    <h3>Basic Communication</h3>
+    <div>
+      <input type="text" id="message-input" placeholder="Message" value="Hello!">
+      <button id="send-btn">Send Message</button>
+      <button id="request-btn">Request Data</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>RPC Method Calls</h3>
+    <div>
+      <button id="rpc-init">call: initialize()</button>
+      <button id="rpc-get">call: getData()</button>
+      <button id="rpc-render">call: render()</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <iframe id="child-iframe" src="standalone-child.html"></iframe>
+  </div>
+
+  <div class="log">
+    <h3>Communication Log</h3>
+    <button id="clear-log" style="float:right;padding:5px 10px;font-size:11px;">Clear</button>
+    <div id="log-content"></div>
+  </div>
+
+  <script type="module">
+    // Inline the library code for file:// compatibility
+    class ParentCommunicator {
+      constructor(targetWindow, options = {}) {
+        this.targetWindow = targetWindow
+        this.targetOrigin = options.targetOrigin || '*'
+        this.options = { timeout: 5000, debug: false, ...options }
+        this.pendingRequests = new Map()
+
+        this.messageHandler = (event) => {
+          if (this.targetOrigin !== '*' && event.origin !== this.targetOrigin) return
+          if (event.source !== this.targetWindow) return
+          this.handleMessage(event.data)
+        }
+        window.addEventListener('message', this.messageHandler)
+      }
+
+      handleMessage(data) {
+        if (data.type === 'response') {
+          const pending = this.pendingRequests.get(data.id)
+          if (pending) {
+            clearTimeout(pending.timeout)
+            this.pendingRequests.delete(data.id)
+            data.success ? pending.resolve(data.payload) : pending.reject(new Error(data.error))
+          }
+        } else if (data.type === 'request') {
+          this.handleRequest(data)
+        } else if (data.type === 'rpc-response') {
+          const pending = this.pendingRequests.get(data.id)
+          if (pending) {
+            clearTimeout(pending.timeout)
+            this.pendingRequests.delete(data.id)
+            data.success ? pending.resolve(data.result) : pending.reject(new Error(data.error))
+          }
+        } else if (data.type === 'rpc-call') {
+          this.handleRPCCall(data)
+        } else {
+          this.options.onMessage?.(data.payload || data)
+        }
+      }
+
+      async handleRequest(request) {
+        if (!this.options.onRequest) {
+          this.sendResponse(request.id, false, undefined, 'No handler')
+          return
+        }
+        try {
+          const result = await this.options.onRequest(request.payload)
+          this.sendResponse(request.id, true, result)
+        } catch (error) {
+          this.sendResponse(request.id, false, undefined, error.message)
+        }
+      }
+
+      async handleRPCCall(call) {
+        const handler = this.rpcHandlers?.get(call.method)
+        if (!handler) {
+          this.sendRPCResponse(call.id, false, undefined, `Method not found: ${call.method}`)
+          return
+        }
+        try {
+          const result = await handler(...call.args)
+          this.sendRPCResponse(call.id, true, result)
+        } catch (error) {
+          this.sendRPCResponse(call.id, false, undefined, error.message)
+        }
+      }
+
+      sendResponse(id, success, payload, error) {
+        this.targetWindow.postMessage({ type: 'response', id, success, payload, error, timestamp: Date.now() }, this.targetOrigin)
+      }
+
+      sendRPCResponse(id, success, result, error) {
+        this.targetWindow.postMessage({ type: 'rpc-response', id, success, result, error, timestamp: Date.now() }, this.targetOrigin)
+      }
+
+      send(payload) {
+        this.targetWindow.postMessage({ type: 'message', payload, timestamp: Date.now() }, this.targetOrigin)
+      }
+
+      request(payload, timeout) {
+        return new Promise((resolve, reject) => {
+          const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+          const timeoutMs = timeout || this.options.timeout || 5000
+
+          const timeoutHandle = setTimeout(() => {
+            this.pendingRequests.delete(id)
+            reject(new Error('Request timeout'))
+          }, timeoutMs)
+
+          this.pendingRequests.set(id, { resolve, reject, timeout: timeoutHandle })
+          this.targetWindow.postMessage({ type: 'request', id, payload, timestamp: Date.now() }, this.targetOrigin)
+        })
+      }
+
+      // RPC methods
+      rpcHandlers = new Map()
+
+      registerRPC(method, handler) {
+        this.rpcHandlers.set(method, handler)
+      }
+
+      callRPC(method, ...args) {
+        return new Promise((resolve, reject) => {
+          const id = `rpc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+          const timeoutHandle = setTimeout(() => {
+            this.pendingRequests.delete(id)
+            reject(new Error('RPC timeout'))
+          }, 5000)
+
+          this.pendingRequests.set(id, { resolve, reject, timeout: timeoutHandle })
+          this.targetWindow.postMessage({ type: 'rpc-call', id, method, args, timestamp: Date.now() }, this.targetOrigin)
+        })
+      }
+
+      destroy() {
+        if (this.messageHandler) {
+          window.removeEventListener('message', this.messageHandler)
+        }
+        this.pendingRequests.forEach(p => {
+          clearTimeout(p.timeout)
+          p.reject(new Error('Destroyed'))
+        })
+        this.pendingRequests.clear()
+      }
+    }
+
+    const iframe = document.getElementById('child-iframe')
+    const logContent = document.getElementById('log-content')
+    let comm
+
+    function log(msg, type = 'info') {
+      const entry = document.createElement('div')
+      entry.className = `log-entry ${type}`
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`
+      logContent.appendChild(entry)
+      logContent.scrollTop = logContent.scrollHeight
+    }
+
+    iframe.addEventListener('load', () => {
+      log('✅ Iframe loaded, initializing...')
+
+      comm = new ParentCommunicator(iframe.contentWindow, {
+        targetOrigin: '*',
+        onMessage: (data) => {
+          log(`📥 Received: ${JSON.stringify(data)}`, 'received')
+        },
+        onRequest: async (data) => {
+          log(`📥 Request: ${JSON.stringify(data)}`, 'received')
+          return { result: 'ok', timestamp: Date.now() }
+        },
+      })
+
+      // Register RPC handlers
+      comm.registerRPC('updateConfig', (config) => {
+        log(`📥 RPC updateConfig: ${JSON.stringify(config)}`, 'received')
+      })
+
+      comm.registerRPC('requestData', async (id) => {
+        log(`📥 RPC requestData: ${id}`, 'received')
+        return { name: `Data-${id}`, value: Math.random() * 100 }
+      })
+
+      log('✅ Ready!')
+    })
+
+    document.getElementById('send-btn').addEventListener('click', () => {
+      const msg = document.getElementById('message-input').value
+      comm.send({ message: msg })
+      log(`📤 Sent: ${msg}`, 'sent')
+    })
+
+    document.getElementById('request-btn').addEventListener('click', async () => {
+      log('📤 Requesting data...', 'sent')
+      try {
+        const result = await comm.request({ type: 'getData' })
+        log(`✅ Response: ${JSON.stringify(result)}`, 'received')
+      } catch (error) {
+        log(`❌ Error: ${error.message}`, 'error')
+      }
+    })
+
+    document.getElementById('rpc-init').addEventListener('click', async () => {
+      log('📤 RPC call: initialize()', 'sent')
+      try {
+        await comm.callRPC('initialize', { width: 800, height: 600 })
+        log('✅ initialize() success', 'received')
+      } catch (error) {
+        log(`❌ ${error.message}`, 'error')
+      }
+    })
+
+    document.getElementById('rpc-get').addEventListener('click', async () => {
+      log('📤 RPC call: getData()', 'sent')
+      try {
+        const result = await comm.callRPC('getData')
+        log(`✅ getData(): ${JSON.stringify(result)}`, 'received')
+      } catch (error) {
+        log(`❌ ${error.message}`, 'error')
+      }
+    })
+
+    document.getElementById('rpc-render').addEventListener('click', async () => {
+      log('📤 RPC call: render()', 'sent')
+      try {
+        await comm.callRPC('render', { content: `Hello at ${new Date().toLocaleTimeString()}` })
+        log('✅ render() success', 'received')
+      } catch (error) {
+        log(`❌ ${error.message}`, 'error')
+      }
+    })
+
+    document.getElementById('clear-log').addEventListener('click', () => {
+      logContent.innerHTML = ''
+    })
+  </script>
+</body>
+</html>

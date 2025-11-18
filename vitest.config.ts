@@ -7,8 +7,9 @@ export default defineConfig({
     setupFiles: ['./src/__tests__/setup.ts'],
     include: ['src/__tests__/**/*.test.ts'],
     onUnhandledRejection: (rejection) => {
-      // Ignore "Communicator destroyed" rejections in tests
-      if (rejection?.message?.includes('Communicator destroyed')) {
+      // Ignore cleanup rejections in tests
+      if (rejection?.message?.includes('Communicator destroyed') ||
+          rejection?.message?.includes('RPC destroyed')) {
         return
       }
       throw rejection

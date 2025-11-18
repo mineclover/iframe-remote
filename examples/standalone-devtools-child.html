@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevTools Child - Standalone</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      min-height: 100vh;
+      margin: 0;
+    }
+    h2 { margin-top: 0; }
+    .info {
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+    code {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: bold;
+      margin-left: 10px;
+    }
+    .status-badge.ready { background: #4caf50; }
+    .status-badge.busy { background: #ff9800; }
+    .activity-log {
+      margin-top: 15px;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 4px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 11px;
+    }
+    .log-entry {
+      padding: 6px;
+      margin: 4px 0;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      border-left: 3px solid #fff;
+      animation: slideIn 0.3s ease-out;
+    }
+    .log-entry.call { border-color: #2196f3; }
+    .log-entry.result { border-color: #4caf50; }
+    .log-entry.error { border-color: #f44336; }
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .executing {
+      animation: pulse 1s infinite;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 15px 0;
+    }
+    .stat-card {
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 32px;
+      font-weight: bold;
+      display: block;
+    }
+    .stat-label {
+      font-size: 12px;
+      opacity: 0.8;
+      display: block;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h2>
+    🔧 DevTools Child (file:// compatible)
+    <span class="status-badge ready" id="status-badge">Ready</span>
+  </h2>
+
+  <div class="stats">
+    <div class="stat-card">
+      <span class="stat-value" id="total-calls">0</span>
+      <span class="stat-label">Total Calls</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value" id="success-count">0</span>
+      <span class="stat-label">Successful</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value" id="error-count">0</span>
+      <span class="stat-label">Errors</span>
+    </div>
+  </div>
+
+  <div class="info">
+    <strong>📋 Exposed Functions:</strong><br>
+    • <code>__getUserInfo()</code> - Get user information<br>
+    • <code>__getPageData()</code> - Get page data<br>
+    • <code>__performAction(action, value)</code> - Perform an action<br>
+    • <code>__asyncOperation(delay)</code> - Async operation<br>
+    • <code>__add(a, b)</code> - Add two numbers<br>
+    • <code>__getRandomNumber(min, max)</code> - Random number
+  </div>
+
+  <div class="info">
+    <strong>📡 Activity Log:</strong>
+    <button onclick="clearActivityLog()" style="float:right;padding:4px 10px;font-size:11px;">Clear</button>
+  </div>
+  <div class="activity-log" id="activity-log"></div>
+
+  <script>
+    // Inlined ChildRPC and ChildDevTools implementation
+    class RPCError extends Error {
+      constructor(message, code) {
+        super(message)
+        this.name = 'RPCError'
+        this.code = code
+      }
+    }
+
+    class ChildRPC {
+      constructor(options = {}) {
+        if (!window.parent || window.parent === window) {
+          throw new Error('ChildRPC must be used inside an iframe')
+        }
+
+        this.parentWindow = window.parent
+        this.targetOrigin = options.targetOrigin || '*'
+        this.handlers = new Map()
+        this.pendingCalls = new Map()
+
+        this.messageHandler = (event) => {
+          if (this.targetOrigin !== '*' && event.origin !== this.targetOrigin) return
+          if (event.source !== this.parentWindow) return
+          this.handleMessage(event.data)
+          options.onMessage?.(event.data)
+        }
+
+        window.addEventListener('message', this.messageHandler)
+      }
+
+      handleMessage(data) {
+        if (data.type === 'rpc-response') {
+          this.handleResponse(data)
+        } else if (data.type === 'rpc-call') {
+          this.handleCall(data)
+        }
+      }
+
+      handleResponse(response) {
+        const pending = this.pendingCalls.get(response.id)
+        if (!pending) return
+
+        clearTimeout(pending.timeout)
+        this.pendingCalls.delete(response.id)
+
+        if (response.success) {
+          pending.resolve(response.result)
+        } else {
+          pending.reject(new RPCError(response.error || 'RPC call failed'))
+        }
+      }
+
+      async handleCall(call) {
+        const handler = this.handlers.get(call.method)
+
+        if (!handler) {
+          this.sendResponse(call.id, false, undefined, `Method not found: ${call.method}`)
+          return
+        }
+
+        try {
+          const result = await handler(...call.args)
+          this.sendResponse(call.id, true, result)
+        } catch (error) {
+          this.sendResponse(call.id, false, undefined, error.message)
+        }
+      }
+
+      sendResponse(id, success, result, error) {
+        const response = {
+          type: 'rpc-response',
+          id,
+          success,
+          result,
+          error,
+          timestamp: Date.now(),
+        }
+        this.parentWindow.postMessage(response, this.targetOrigin)
+      }
+
+      register(method, handler) {
+        this.handlers.set(method, handler)
+      }
+
+      call(method, ...args) {
+        return new Promise((resolve, reject) => {
+          const id = `rpc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+          const timeoutHandle = setTimeout(() => {
+            this.pendingCalls.delete(id)
+            reject(new RPCError('RPC call timeout', 'TIMEOUT'))
+          }, 5000)
+
+          this.pendingCalls.set(id, { resolve, reject, timeout: timeoutHandle })
+
+          const message = {
+            type: 'rpc-call',
+            id,
+            method,
+            args,
+            timestamp: Date.now(),
+          }
+
+          this.parentWindow.postMessage(message, this.targetOrigin)
+        })
+      }
+
+      destroy() {
+        window.removeEventListener('message', this.messageHandler)
+        this.handlers.clear()
+        this.pendingCalls.forEach((pending) => {
+          clearTimeout(pending.timeout)
+          pending.reject(new RPCError('RPC destroyed'))
+        })
+        this.pendingCalls.clear()
+      }
+    }
+
+    class ChildDevTools {
+      constructor(options = {}) {
+        this.options = {
+          functionPattern: /^__/,
+          includeWindowProps: true,
+          ...options,
+        }
+
+        this.exposedFunctions = new Map()
+        this.rpc = new ChildRPC(options)
+
+        // Register DevTools methods
+        this.rpc.register('__devtools_list', () => this.listFunctions())
+        this.rpc.register('__devtools_call', (name, ...args) =>
+          this.callFunction(name, args)
+        )
+        this.rpc.register('__devtools_refresh', () => this.refreshFunctions())
+
+        // Initial scan
+        this.refreshFunctions()
+      }
+
+      matchesPattern(name) {
+        const pattern = this.options.functionPattern
+        if (pattern instanceof RegExp) {
+          return pattern.test(name)
+        } else if (typeof pattern === 'function') {
+          return pattern(name)
+        }
+        return /^__/.test(name)
+      }
+
+      scanWindowFunctions() {
+        const functions = new Map()
+
+        try {
+          const win = window
+          for (const key in win) {
+            try {
+              const value = win[key]
+              if (typeof value === 'function' && this.matchesPattern(key)) {
+                functions.set(key, value)
+              }
+            } catch (e) {
+              // Skip
+            }
+          }
+
+          if (this.options.includeWindowProps) {
+            const propNames = Object.getOwnPropertyNames(win)
+            for (const key of propNames) {
+              try {
+                if (functions.has(key)) continue
+                const value = win[key]
+                if (typeof value === 'function' && this.matchesPattern(key)) {
+                  functions.set(key, value)
+                }
+              } catch (e) {
+                // Skip
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error scanning window functions:', error)
+        }
+
+        return functions
+      }
+
+      refreshFunctions() {
+        this.exposedFunctions = this.scanWindowFunctions()
+        return this.listFunctions()
+      }
+
+      extractParameters(fn) {
+        try {
+          const fnStr = fn.toString()
+          // Extract parameter list from function signature
+          const match = fnStr.match(/\(([^)]*)\)/)
+          if (!match) return { params: [], count: 0 }
+
+          const paramsStr = match[1].trim()
+          if (!paramsStr) return { params: [], count: 0 }
+
+          // Parse parameters (handle default values, destructuring, etc.)
+          const params = paramsStr.split(',').map(p => {
+            // Remove default values and whitespace
+            const paramName = p.trim().split('=')[0].trim()
+            // Handle destructuring
+            if (paramName.startsWith('{') || paramName.startsWith('[')) {
+              return { name: paramName, type: 'destructured' }
+            }
+            return { name: paramName, type: 'any' }
+          })
+
+          return { params, count: fn.length }
+        } catch (error) {
+          return { params: [], count: fn.length }
+        }
+      }
+
+      listFunctions() {
+        const list = []
+
+        this.exposedFunctions.forEach((fn, name) => {
+          const paramInfo = this.extractParameters(fn)
+
+          // Check for metadata
+          const meta = fn.__meta || {}
+
+          list.push({
+            name,
+            type: fn.constructor.name === 'AsyncFunction' ? 'asyncFunction' : 'function',
+            params: paramInfo.params,
+            paramCount: paramInfo.count,
+            description: meta.description,
+            paramsMeta: meta.params || [],
+            source: this.options.debug ? fn.toString().slice(0, 200) : undefined,
+          })
+        })
+
+        return list
+      }
+
+      async callFunction(name, args) {
+        const fn = this.exposedFunctions.get(name)
+
+        if (!fn) {
+          throw new Error(`Function not found: ${name}`)
+        }
+
+        // Log function call
+        if (window.logActivity) {
+          window.logActivity(`📞 Calling ${name}(${JSON.stringify(args).slice(0, 50)})`, 'call')
+          window.setStatus('busy')
+        }
+
+        try {
+          const startTime = Date.now()
+          const result = await fn(...args)
+          const duration = Date.now() - startTime
+
+          // Log success
+          if (window.logActivity) {
+            window.logActivity(
+              `✅ ${name} returned: ${JSON.stringify(result).slice(0, 50)} (${duration}ms)`,
+              'result'
+            )
+            window.updateStats('success')
+            window.setStatus('ready')
+          }
+
+          return result
+        } catch (error) {
+          // Log error
+          if (window.logActivity) {
+            window.logActivity(`❌ ${name} error: ${error.message}`, 'error')
+            window.updateStats('error')
+            window.setStatus('ready')
+          }
+          throw new Error(`Error calling ${name}: ${error.message}`)
+        }
+      }
+
+      expose(name, fn) {
+        if (!this.matchesPattern(name)) {
+          console.warn(`Function name "${name}" doesn't match the pattern, but exposing anyway`)
+        }
+        this.exposedFunctions.set(name, fn)
+        window[name] = fn
+      }
+
+      destroy() {
+        this.exposedFunctions.clear()
+        this.rpc.destroy()
+      }
+    }
+
+    // Define window functions with metadata
+    window.__getUserInfo = function() {
+      return {
+        name: 'Test User',
+        role: 'admin',
+        timestamp: Date.now()
+      }
+    }
+    window.__getUserInfo.__meta = {
+      description: '사용자 정보를 반환합니다',
+      params: []
+    }
+
+    window.__getPageData = function() {
+      return {
+        title: document.title,
+        url: window.location.href,
+        userAgent: navigator.userAgent.slice(0, 50) + '...'
+      }
+    }
+    window.__getPageData.__meta = {
+      description: '현재 페이지 데이터를 반환합니다',
+      params: []
+    }
+
+    window.__performAction = function(action, value) {
+      console.log(`Performing action: ${action} with value:`, value)
+      return {
+        success: true,
+        action,
+        value,
+        executedAt: Date.now()
+      }
+    }
+    window.__performAction.__meta = {
+      description: '특정 액션을 수행합니다',
+      params: [
+        { name: 'action', type: 'string', description: '수행할 액션 타입' },
+        { name: 'value', type: 'any', description: '액션에 전달할 값' }
+      ]
+    }
+
+    window.__asyncOperation = async function(delay = 1000) {
+      console.log(`Starting async operation (${delay}ms)...`)
+      await new Promise(resolve => setTimeout(resolve, delay))
+      console.log('Async operation completed!')
+      return {
+        completed: true,
+        delay,
+        timestamp: Date.now()
+      }
+    }
+    window.__asyncOperation.__meta = {
+      description: '비동기 작업을 실행합니다',
+      params: [
+        { name: 'delay', type: 'number', default: 1000, min: 0, max: 5000, description: '지연 시간(ms)' }
+      ]
+    }
+
+    window.__add = function(a, b) {
+      return a + b
+    }
+    window.__add.__meta = {
+      description: '두 숫자를 더합니다',
+      params: [
+        { name: 'a', type: 'number', description: '첫 번째 숫자' },
+        { name: 'b', type: 'number', description: '두 번째 숫자' }
+      ]
+    }
+
+    window.__getRandomNumber = function(min = 0, max = 100) {
+      return Math.floor(Math.random() * (max - min + 1)) + min
+    }
+    window.__getRandomNumber.__meta = {
+      description: '범위 내 랜덤 숫자를 생성합니다',
+      params: [
+        { name: 'min', type: 'number', default: 0, description: '최소값' },
+        { name: 'max', type: 'number', default: 100, description: '최대값' }
+      ]
+    }
+
+    window.__setColor = function(color) {
+      document.body.style.background = color
+      return { success: true, color }
+    }
+    window.__setColor.__meta = {
+      description: '배경색을 변경합니다',
+      params: [
+        { name: 'color', type: 'color', default: '#667eea', description: '배경색 (HEX 코드)' }
+      ]
+    }
+
+    window.__toggleFeature = function(enabled) {
+      console.log(`Feature ${enabled ? 'enabled' : 'disabled'}`)
+      return { feature: 'test', enabled }
+    }
+    window.__toggleFeature.__meta = {
+      description: '기능을 켜거나 끕니다',
+      params: [
+        { name: 'enabled', type: 'boolean', default: true, description: '활성화 여부' }
+      ]
+    }
+
+    window.__selectOption = function(option) {
+      console.log(`Selected: ${option}`)
+      return { selected: option }
+    }
+    window.__selectOption.__meta = {
+      description: '옵션을 선택합니다',
+      params: [
+        { name: 'option', type: 'select', options: ['option1', 'option2', 'option3'], default: 'option1', description: '선택할 옵션' }
+      ]
+    }
+
+    // 🆕 Functions WITHOUT metadata - demonstrating auto-inference
+    // These functions don't have __meta, so UI is auto-generated from parameter names
+
+    window.__updateConfig = function(isEnabled, maxRetries, backgroundColor) {
+      console.log('Config updated:', { isEnabled, maxRetries, backgroundColor })
+      return {
+        success: true,
+        config: { isEnabled, maxRetries, backgroundColor },
+        inferredTypes: {
+          isEnabled: 'boolean (from "is" prefix)',
+          maxRetries: 'number (from "max" prefix)',
+          backgroundColor: 'color (from "color" in name)'
+        }
+      }
+    }
+
+    window.__processData = function(itemsList, minCount, shouldValidate) {
+      return {
+        items: itemsList,
+        count: minCount,
+        validated: shouldValidate,
+        inferredTypes: {
+          itemsList: 'array (from "list" suffix)',
+          minCount: 'number (from "min" prefix)',
+          shouldValidate: 'boolean (from "should" prefix)'
+        }
+      }
+    }
+
+    window.__setDimensions = function(widthPx, heightPx, hasMargin) {
+      return {
+        width: widthPx,
+        height: heightPx,
+        margin: hasMargin,
+        inferredTypes: {
+          widthPx: 'number (from "px" suffix)',
+          heightPx: 'number (from "px" suffix)',
+          hasMargin: 'boolean (from "has" prefix)'
+        }
+      }
+    }
+
+    window.__scheduleTask = function(delayMs, taskName) {
+      return {
+        scheduled: true,
+        delay: delayMs,
+        task: taskName,
+        inferredTypes: {
+          delayMs: 'number (from "ms" suffix)',
+          taskName: 'text (default)'
+        }
+      }
+    }
+
+    // Initialize DevTools
+    const devtools = new ChildDevTools({
+      functionPattern: /^__/,
+      includeWindowProps: true,
+      debug: true
+    })
+
+    console.log('✅ DevTools initialized!')
+    console.log('Available functions:', Object.keys(window).filter(k => k.startsWith('__')))
+
+    window.devtools = devtools
+
+    // UI helpers
+    const activityLog = document.getElementById('activity-log')
+    const statusBadge = document.getElementById('status-badge')
+    const totalCallsEl = document.getElementById('total-calls')
+    const successCountEl = document.getElementById('success-count')
+    const errorCountEl = document.getElementById('error-count')
+
+    let stats = {
+      total: 0,
+      success: 0,
+      error: 0
+    }
+
+    window.logActivity = function(message, type = 'info') {
+      const entry = document.createElement('div')
+      entry.className = `log-entry ${type}`
+      const time = new Date().toLocaleTimeString()
+      entry.textContent = `[${time}] ${message}`
+      activityLog.appendChild(entry)
+      activityLog.scrollTop = activityLog.scrollHeight
+
+      // Keep only last 50 entries
+      while (activityLog.children.length > 50) {
+        activityLog.removeChild(activityLog.firstChild)
+      }
+    }
+
+    window.clearActivityLog = function() {
+      activityLog.innerHTML = ''
+    }
+
+    window.setStatus = function(status) {
+      if (status === 'busy') {
+        statusBadge.className = 'status-badge busy executing'
+        statusBadge.textContent = 'Executing...'
+      } else {
+        statusBadge.className = 'status-badge ready'
+        statusBadge.textContent = 'Ready'
+      }
+    }
+
+    window.updateStats = function(type) {
+      stats.total++
+      if (type === 'success') {
+        stats.success++
+      } else if (type === 'error') {
+        stats.error++
+      }
+
+      totalCallsEl.textContent = stats.total
+      successCountEl.textContent = stats.success
+      errorCountEl.textContent = stats.error
+    }
+
+    // Initial log
+    window.logActivity('✅ DevTools initialized and ready!', 'result')
+  </script>
+</body>
+</html>

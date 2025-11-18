@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Standalone Child - Works with file://</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      min-height: 100vh;
+      margin: 0;
+    }
+    h2 { margin-top: 0; }
+    .status {
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+    button {
+      margin: 5px;
+      padding: 8px 16px;
+      font-size: 13px;
+      cursor: pointer;
+      background: white;
+      color: #667eea;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    button:hover { background: #f0f0f0; }
+    .render-area {
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+      margin: 10px 0;
+      min-height: 60px;
+    }
+    .log {
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 4px;
+      max-height: 150px;
+      overflow-y: auto;
+      font-size: 11px;
+      font-family: monospace;
+    }
+    .log-entry { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  </style>
+</head>
+<body>
+  <h2>🔧 Standalone Child (Embedded)</h2>
+
+  <div class="status">
+    <strong>Status:</strong> <span id="status">Initializing...</span><br>
+    <strong>Initialized:</strong> <span id="initialized">false</span>
+  </div>
+
+  <div>
+    <button id="send-msg">Send Message</button>
+    <button id="call-update">Call: updateConfig</button>
+    <button id="call-request">Call: requestData</button>
+  </div>
+
+  <div class="render-area" id="render-area">
+    <em>Waiting for render()...</em>
+  </div>
+
+  <div class="log">
+    <div id="log-content"></div>
+  </div>
+
+  <script type="module">
+    class ChildCommunicator {
+      constructor(options = {}) {
+        if (!window.parent || window.parent === window) {
+          throw new Error('Must be in iframe')
+        }
+        this.parentWindow = window.parent
+        this.targetOrigin = options.targetOrigin || '*'
+        this.options = { timeout: 5000, debug: false, ...options }
+        this.pendingRequests = new Map()
+
+        this.messageHandler = (event) => {
+          if (this.targetOrigin !== '*' && event.origin !== this.targetOrigin) return
+          if (event.source !== this.parentWindow) return
+          this.handleMessage(event.data)
+        }
+        window.addEventListener('message', this.messageHandler)
+      }
+
+      handleMessage(data) {
+        if (data.type === 'response') {
+          const pending = this.pendingRequests.get(data.id)
+          if (pending) {
+            clearTimeout(pending.timeout)
+            this.pendingRequests.delete(data.id)
+            data.success ? pending.resolve(data.payload) : pending.reject(new Error(data.error))
+          }
+        } else if (data.type === 'request') {
+          this.handleRequest(data)
+        } else if (data.type === 'rpc-response') {
+          const pending = this.pendingRequests.get(data.id)
+          if (pending) {
+            clearTimeout(pending.timeout)
+            this.pendingRequests.delete(data.id)
+            data.success ? pending.resolve(data.result) : pending.reject(new Error(data.error))
+          }
+        } else if (data.type === 'rpc-call') {
+          this.handleRPCCall(data)
+        } else {
+          this.options.onMessage?.(data.payload || data)
+        }
+      }
+
+      async handleRequest(request) {
+        if (!this.options.onRequest) {
+          this.sendResponse(request.id, false, undefined, 'No handler')
+          return
+        }
+        try {
+          const result = await this.options.onRequest(request.payload)
+          this.sendResponse(request.id, true, result)
+        } catch (error) {
+          this.sendResponse(request.id, false, undefined, error.message)
+        }
+      }
+
+      async handleRPCCall(call) {
+        const handler = this.rpcHandlers?.get(call.method)
+        if (!handler) {
+          this.sendRPCResponse(call.id, false, undefined, `Method not found: ${call.method}`)
+          return
+        }
+        try {
+          const result = await handler(...call.args)
+          this.sendRPCResponse(call.id, true, result)
+        } catch (error) {
+          this.sendRPCResponse(call.id, false, undefined, error.message)
+        }
+      }
+
+      sendResponse(id, success, payload, error) {
+        this.parentWindow.postMessage({ type: 'response', id, success, payload, error, timestamp: Date.now() }, this.targetOrigin)
+      }
+
+      sendRPCResponse(id, success, result, error) {
+        this.parentWindow.postMessage({ type: 'rpc-response', id, success, result, error, timestamp: Date.now() }, this.targetOrigin)
+      }
+
+      send(payload) {
+        this.parentWindow.postMessage({ type: 'message', payload, timestamp: Date.now() }, this.targetOrigin)
+      }
+
+      request(payload, timeout) {
+        return new Promise((resolve, reject) => {
+          const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+          const timeoutMs = timeout || this.options.timeout || 5000
+
+          const timeoutHandle = setTimeout(() => {
+            this.pendingRequests.delete(id)
+            reject(new Error('Request timeout'))
+          }, timeoutMs)
+
+          this.pendingRequests.set(id, { resolve, reject, timeout: timeoutHandle })
+          this.parentWindow.postMessage({ type: 'request', id, payload, timestamp: Date.now() }, this.targetOrigin)
+        })
+      }
+
+      rpcHandlers = new Map()
+
+      registerRPC(method, handler) {
+        this.rpcHandlers.set(method, handler)
+      }
+
+      callRPC(method, ...args) {
+        return new Promise((resolve, reject) => {
+          const id = `rpc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+          const timeoutHandle = setTimeout(() => {
+            this.pendingRequests.delete(id)
+            reject(new Error('RPC timeout'))
+          }, 5000)
+
+          this.pendingRequests.set(id, { resolve, reject, timeout: timeoutHandle })
+          this.parentWindow.postMessage({ type: 'rpc-call', id, method, args, timestamp: Date.now() }, this.targetOrigin)
+        })
+      }
+
+      destroy() {
+        if (this.messageHandler) {
+          window.removeEventListener('message', this.messageHandler)
+        }
+        this.pendingRequests.forEach(p => {
+          clearTimeout(p.timeout)
+          p.reject(new Error('Destroyed'))
+        })
+        this.pendingRequests.clear()
+      }
+    }
+
+    const statusEl = document.getElementById('status')
+    const initializedEl = document.getElementById('initialized')
+    const renderArea = document.getElementById('render-area')
+    const logContent = document.getElementById('log-content')
+
+    let isInitialized = false
+    let childState = { status: 'idle', items: [] }
+
+    function log(msg) {
+      const entry = document.createElement('div')
+      entry.className = 'log-entry'
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`
+      logContent.appendChild(entry)
+      logContent.scrollTop = logContent.scrollHeight
+    }
+
+    const comm = new ChildCommunicator({
+      targetOrigin: '*',
+      onMessage: (data) => {
+        log(`📥 Message: ${JSON.stringify(data)}`)
+      },
+      onRequest: async (data) => {
+        log(`📥 Request: ${JSON.stringify(data)}`)
+        if (data.type === 'getData') {
+          return { status: childState.status, items: childState.items }
+        }
+        return { result: 'ok' }
+      },
+    })
+
+    // Register RPC methods
+    comm.registerRPC('initialize', async (options) => {
+      log(`📥 RPC initialize: ${JSON.stringify(options)}`)
+      isInitialized = true
+      initializedEl.textContent = 'true'
+      statusEl.textContent = 'Initialized'
+      childState.status = 'initialized'
+      await new Promise(r => setTimeout(r, 300))
+    })
+
+    comm.registerRPC('getData', async () => {
+      log('📥 RPC getData')
+      if (!isInitialized) throw new Error('Not initialized')
+      childState.items.push({ id: Date.now(), value: Math.random() })
+      return { status: childState.status, items: childState.items }
+    })
+
+    comm.registerRPC('render', (data) => {
+      log(`📥 RPC render: ${JSON.stringify(data)}`)
+      renderArea.innerHTML = `<div style="padding:10px;background:rgba(255,255,255,0.1);border-radius:4px;"><strong>Rendered:</strong> ${data.content}</div>`
+    })
+
+    comm.registerRPC('destroy', async () => {
+      log('📥 RPC destroy')
+      isInitialized = false
+      initializedEl.textContent = 'false'
+      statusEl.textContent = 'Destroyed'
+      childState = { status: 'destroyed', items: [] }
+    })
+
+    statusEl.textContent = 'Ready'
+    log('✅ Child ready!')
+
+    document.getElementById('send-msg').addEventListener('click', () => {
+      comm.send({ message: 'Hello from child!' })
+      log('📤 Sent message')
+    })
+
+    document.getElementById('call-update').addEventListener('click', async () => {
+      log('📤 RPC call: updateConfig')
+      try {
+        await comm.callRPC('updateConfig', { theme: 'dark', lang: 'ko' })
+        log('✅ updateConfig success')
+      } catch (error) {
+        log(`❌ ${error.message}`)
+      }
+    })
+
+    document.getElementById('call-request').addEventListener('click', async () => {
+      log('📤 RPC call: requestData')
+      try {
+        const result = await comm.callRPC('requestData', 'item-123')
+        log(`✅ requestData: ${JSON.stringify(result)}`)
+      } catch (error) {
+        log(`❌ ${error.message}`)
+      }
+    })
+  </script>
+</body>
+</html>

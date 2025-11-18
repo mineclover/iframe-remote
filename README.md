@@ -1,176 +1,172 @@
 # iframe-remote
 
-Bidirectional iframe communication protocol implementation in TypeScript.
+Type-safe bidirectional iframe communication library with DevTools support.
 
 ## Features
 
-- 🔄 **Bidirectional Communication**: Send messages both ways between parent and child iframe
-- 📡 **Request-Response Pattern**: Built-in support for async request/response communication
-- 🔒 **Security**: Origin validation for cross-origin iframe communication
-- ⏱️ **Timeout Handling**: Configurable timeout for requests
-- 🎯 **Type-Safe**: Full TypeScript support with type definitions
-- 🧪 **Well-Tested**: Comprehensive E2E tests with Playwright
+- 🔄 **Bidirectional Communication** - Parent ↔ Child iframe messaging
+- 🎯 **Type-Safe RPC** - Remote procedure calls with TypeScript type safety
+- 🛠️ **DevTools Integration** - Automatic function discovery and remote execution
+- 📋 **Metadata Schema** - Rich parameter metadata for UI generation
+- 🧠 **Auto Type Inference** - Infers parameter types from naming patterns
+- ✅ **Fully Tested** - Unit tests and E2E tests with Playwright
 
 ## Installation
 
 ```bash
-npm install @packages/iframe-remote
+npm install iframe-remote
+# or
+pnpm add iframe-remote
 ```
 
-## Usage
+## Quick Start
 
-### Parent Page
+### DevTools (Recommended)
 
+**Child Window:**
 ```typescript
-import { ParentCommunicator } from '@packages/iframe-remote/parent'
+import { ChildDevTools, createFunctionMeta } from 'iframe-remote'
 
-const iframe = document.getElementById('my-iframe') as HTMLIFrameElement
+// Define functions with __ prefix
+window.__getUserInfo = function() {
+  return { name: 'Alice', role: 'admin' }
+}
 
-const communicator = new ParentCommunicator(iframe.contentWindow!, {
-  targetOrigin: 'https://child-domain.com', // Or '*' for same-origin
-  onMessage: (data) => {
-    console.log('Received from child:', data)
-  },
-  onRequest: async (data) => {
-    // Handle requests from child
-    return { result: 'data from parent' }
-  },
-  timeout: 5000,
-  debug: true
+window.__setTheme = function(theme: string) {
+  document.body.className = `theme-${theme}`
+  return { applied: theme }
+}
+
+// Add metadata for UI generation
+window.__setTheme.__meta = createFunctionMeta({
+  description: 'Change theme',
+  params: [{
+    name: 'theme',
+    type: 'select',
+    options: ['light', 'dark', 'auto'],
+    default: 'auto'
+  }]
 })
 
-// Send one-way message
-communicator.send({ type: 'greeting', message: 'Hello child!' })
-
-// Send request and wait for response
-const response = await communicator.request({ type: 'getData' })
-console.log('Response from child:', response)
+// Initialize
+new ChildDevTools({ functionPattern: /^__/ })
 ```
 
-### Child Page (Inside iframe)
+**Parent Window:**
+```typescript
+import { ParentDevTools } from 'iframe-remote'
+
+const devtools = new ParentDevTools(iframe.contentWindow!)
+
+// List functions
+const functions = await devtools.listFunctions()
+
+// Call function
+const result = await devtools.callFunction('__setTheme', 'dark')
+```
+
+### RPC (Remote Procedure Call)
+
+**Child:**
+```typescript
+import { ChildRPC } from 'iframe-remote'
+
+const rpc = new ChildRPC()
+rpc.register('add', (a: number, b: number) => a + b)
+```
+
+**Parent:**
+```typescript
+import { ParentRPC } from 'iframe-remote'
+
+const rpc = new ParentRPC(iframe.contentWindow!)
+const result = await rpc.call('add', 5, 3) // 8
+```
+
+## Parameter Types
+
+| Type | UI Widget | Metadata |
+|------|-----------|----------|
+| `string` | Text input (auto-expanding) | `pattern?: string` |
+| `number` | Number input | `min?, max?, step?` |
+| `boolean` | Checkbox | - |
+| `select` | Dropdown | `options: string[] \| {label, value}[]` |
+| `array` | Array input | `itemType?: ParamType` |
+| `color` | Color picker | - |
+| `time` | Time picker (HH:MM) | `min?, max?` |
+| `date` | Date picker (YYYY-MM-DD) | `min?, max?` |
+| `range` | Slider | `min, max, step?` |
+
+### Metadata Example
 
 ```typescript
-import { ChildCommunicator } from '@packages/iframe-remote/child'
-
-const communicator = new ChildCommunicator({
-  targetOrigin: 'https://parent-domain.com', // Or '*' for same-origin
-  onMessage: (data) => {
-    console.log('Received from parent:', data)
-  },
-  onRequest: async (data) => {
-    // Handle requests from parent
-    if (data.type === 'getData') {
-      return { status: 'ok', data: { foo: 'bar' } }
+window.__processData.__meta = createFunctionMeta({
+  description: 'Process data with filters',
+  params: [
+    {
+      name: 'category',
+      type: 'select',
+      options: ['all', 'posts', 'users'],
+      default: 'all'
+    },
+    {
+      name: 'minScore',
+      type: 'number',
+      min: 0,
+      max: 100,
+      default: 50
+    },
+    {
+      name: 'backgroundColor',
+      type: 'color',
+      default: '#667eea'
     }
-  },
-  timeout: 5000,
-  debug: true
+  ]
 })
-
-// Send one-way message
-communicator.send({ type: 'notification', message: 'Something happened!' })
-
-// Send request and wait for response
-const response = await communicator.request({ type: 'getConfig' })
-console.log('Response from parent:', response)
 ```
 
-## API
+### Auto Type Inference
 
-### ParentCommunicator
-
-#### Constructor
+Without metadata, types are inferred from parameter names:
 
 ```typescript
-new ParentCommunicator(targetWindow: Window, options?: CommunicatorOptions)
-```
-
-#### Methods
-
-- `send(payload: any): void` - Send one-way message to child
-- `request<T>(payload: any, timeout?: number): Promise<T>` - Send request and wait for response
-- `destroy(): void` - Clean up and remove event listeners
-
-### ChildCommunicator
-
-#### Constructor
-
-```typescript
-new ChildCommunicator(options?: CommunicatorOptions)
-```
-
-#### Methods
-
-- `send(payload: any): void` - Send one-way message to parent
-- `request<T>(payload: any, timeout?: number): Promise<T>` - Send request and wait for response
-- `destroy(): void` - Clean up and remove event listeners
-
-### CommunicatorOptions
-
-```typescript
-interface CommunicatorOptions {
-  targetOrigin?: string        // Target origin for postMessage
-  timeout?: number             // Timeout for requests (default: 5000ms)
-  onMessage?: (data: any) => void
-  onRequest?: (data: any) => Promise<any> | any
-  onError?: (error: Error) => void
-  debug?: boolean              // Enable debug logging
+window.__updateConfig = function(isEnabled, maxRetries, backgroundColor) {
+  // isEnabled → boolean
+  // maxRetries → number
+  // backgroundColor → color
 }
 ```
 
-## Development
-
-### Build
-
-```bash
-npm run build
-```
-
-### Run Tests
-
-```bash
-# Install Playwright browsers first
-npm run playwright:install
-
-# Run all tests
-npm test
-
-# Run E2E tests only
-npm run test:e2e
-
-# Run E2E tests in UI mode
-npm run test:e2e:ui
-
-# Run E2E tests in headed mode
-npm run test:e2e:headed
-```
-
-### Run Examples
-
-1. Build the project:
-```bash
-npm run build
-```
-
-2. Serve the examples directory:
-```bash
-npx serve examples -p 3000
-```
-
-3. Open http://localhost:3000/parent/index.html in your browser
+**Patterns:**
+- `is*`, `has*`, `should*` → `boolean`
+- `min*`, `max*`, `*Count` → `number`
+- `*Color`, `*Colour` → `color`
 
 ## Examples
 
-Check the `examples/` directory for working examples:
-- `examples/parent/index.html` - Parent page with iframe
-- `examples/child/index.html` - Child page to be embedded
+See `/examples` directory:
+- `devtools-parent.html` / `devtools-child.html` - DevTools demo
+- `standalone-devtools-parent.html` / `standalone-devtools-child.html` - file:// compatible
+- `practical-examples.ts` - Real-world use cases
+- `typed-metadata-example.ts` - Type-safe metadata
 
-## Security Considerations
+## Documentation
 
-- Always specify `targetOrigin` in production to prevent messages from unauthorized origins
-- Validate message data before processing
-- Use HTTPS for cross-origin communication
-- Implement proper error handling
+- [Metadata Schema Guide](./docs/METADATA_SCHEMA.md) - Complete reference
+- [API Documentation](./src/index.ts) - TypeScript definitions
+
+## Testing
+
+```bash
+# Unit tests
+pnpm test
+
+# E2E tests
+pnpm test:e2e
+
+# E2E tests with browser
+pnpm test:e2e:headed
+```
 
 ## License
 
