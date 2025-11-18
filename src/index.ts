@@ -57,6 +57,16 @@ export type {
 export {
   createFunctionMeta,
   withMeta,
+} from './types-devtools'
+
+export {
   validateParamMeta,
   validateFunctionMeta,
-} from './types-devtools'
+  assertValidParamMeta,
+  assertValidFunctionMeta,
+  isValidParamMeta,
+  isValidFunctionMeta,
+  ParamTypeSchema,
+  ParamMetaSchema,
+  FunctionMetaSchema,
+} from './metadata-validator'

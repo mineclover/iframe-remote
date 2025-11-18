@@ -48,5 +48,8 @@
     "communication",
     "bidirectional",
     "protocol"
-  ]
+  ],
+  "dependencies": {
+    "zod": "^4.1.12"
+  }
 }
