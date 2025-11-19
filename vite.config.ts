@@ -4,7 +4,7 @@ import { resolve } from 'path'
 export default defineConfig({
   root: './examples',
   server: {
-    port: 3000,
+    port: 4500,
     open: '/iframe-previewer.html',
   },
   build: {
