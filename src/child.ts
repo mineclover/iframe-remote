@@ -5,6 +5,7 @@ import type {
   CommunicatorOptions,
   PendingRequest,
 } from './types'
+import { generateId } from './utils'
 
 /**
  * Child-side communicator for iframe communication
@@ -157,7 +158,7 @@ export class ChildCommunicator {
    */
   public request<T = any>(payload: any, timeout?: number): Promise<T> {
     return new Promise((resolve, reject) => {
-      const id = this.generateId()
+      const id = generateId()
       const timeoutMs = timeout || this.options.timeout || 5000
 
       const timeoutHandle = setTimeout(() => {
@@ -192,13 +193,6 @@ export class ChildCommunicator {
     } catch (error) {
       this.handleError(error as Error)
     }
-  }
-
-  /**
-   * Generate unique message ID
-   */
-  private generateId(): string {
-    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
   }
 
   /**

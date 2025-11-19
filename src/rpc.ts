@@ -4,6 +4,7 @@
  */
 
 import type { CommunicatorOptions } from './types'
+import { generateId } from './utils'
 import {
   RPCError,
 } from './types-rpc'
@@ -78,7 +79,7 @@ export class ParentRPC<
     ...args: ExtractParameters<ChildAPI[M]>
   ): Promise<ExtractReturnType<ChildAPI[M]>> {
     return new Promise((resolve, reject) => {
-      const id = this.generateId()
+      const id = generateId('rpc')
       const timeout = options.timeout || 5000
 
       const timeoutHandle = setTimeout(() => {
@@ -230,13 +231,6 @@ export class ParentRPC<
   }
 
   /**
-   * Generate unique call ID
-   */
-  private generateId(): string {
-    return `rpc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-  }
-
-  /**
    * Clean up
    */
   public destroy(): void {
@@ -307,7 +301,7 @@ export class ChildRPC<
     ...args: ExtractParameters<ParentAPI[M]>
   ): Promise<ExtractReturnType<ParentAPI[M]>> {
     return new Promise((resolve, reject) => {
-      const id = this.generateId()
+      const id = generateId('rpc')
       const timeout = options.timeout || 5000
 
       const timeoutHandle = setTimeout(() => {
@@ -455,13 +449,6 @@ export class ChildRPC<
     } catch (err) {
       console.error('Failed to send RPC response:', err)
     }
-  }
-
-  /**
-   * Generate unique call ID
-   */
-  private generateId(): string {
-    return `rpc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
   }
 
   /**
