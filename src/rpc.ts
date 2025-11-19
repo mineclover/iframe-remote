@@ -109,7 +109,11 @@ export class ParentRPC<
         timestamp: Date.now(),
       }
 
-      this.targetWindow.postMessage(message, this.targetOrigin)
+      try {
+        this.targetWindow.postMessage(message, this.targetOrigin)
+      } catch (error) {
+        throw new RPCError(`Failed to send RPC call: ${error instanceof Error ? error.message : String(error)}`, 'SEND_ERROR')
+      }
     })
   }
 
@@ -218,7 +222,11 @@ export class ParentRPC<
       timestamp: Date.now(),
     }
 
-    this.targetWindow.postMessage(response, this.targetOrigin)
+    try {
+      this.targetWindow.postMessage(response, this.targetOrigin)
+    } catch (err) {
+      console.error('Failed to send RPC response:', err)
+    }
   }
 
   /**
@@ -329,7 +337,11 @@ export class ChildRPC<
         timestamp: Date.now(),
       }
 
-      this.parentWindow.postMessage(message, this.targetOrigin)
+      try {
+        this.parentWindow.postMessage(message, this.targetOrigin)
+      } catch (error) {
+        throw new RPCError(`Failed to send RPC call: ${error instanceof Error ? error.message : String(error)}`, 'SEND_ERROR')
+      }
     })
   }
 
@@ -438,7 +450,11 @@ export class ChildRPC<
       timestamp: Date.now(),
     }
 
-    this.parentWindow.postMessage(response, this.targetOrigin)
+    try {
+      this.parentWindow.postMessage(response, this.targetOrigin)
+    } catch (err) {
+      console.error('Failed to send RPC response:', err)
+    }
   }
 
   /**

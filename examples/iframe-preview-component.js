@@ -515,7 +515,7 @@ class IframePreview extends HTMLElement {
       this.updateTransform();
       this.updateIndicators();
     } else if (this.isResizing) {
-      this.doResize(e);
+      this.doResize(e.clientX, e.clientY);
     }
   }
 
@@ -553,7 +553,9 @@ class IframePreview extends HTMLElement {
       this.updateTransform();
       this.updateIndicators();
     } else if (this.isResizing) {
-      this.doResizeTouch(e);
+      e.preventDefault();
+      const touch = e.touches[0];
+      this.doResize(touch.clientX, touch.clientY);
     }
   }
 
@@ -570,9 +572,9 @@ class IframePreview extends HTMLElement {
     this.startPanY = this.panY;
   }
 
-  doResize(e) {
-    const deltaX = e.clientX - this.dragStartX;
-    const deltaY = e.clientY - this.dragStartY;
+  doResize(clientX, clientY) {
+    const deltaX = clientX - this.dragStartX;
+    const deltaY = clientY - this.dragStartY;
 
     let newWidth = this.startWidth;
     let newHeight = this.startHeight;
@@ -620,7 +622,7 @@ class IframePreview extends HTMLElement {
     this.updateIndicators();
   }
 
-  // Touch resize methods
+  // Touch resize start
   startResizeTouch(e, handle) {
     e.stopPropagation();
     e.preventDefault();
@@ -633,58 +635,6 @@ class IframePreview extends HTMLElement {
     this.startHeight = this.frameHeight;
     this.startPanX = this.panX;
     this.startPanY = this.panY;
-  }
-
-  doResizeTouch(e) {
-    e.preventDefault();
-    const touch = e.touches[0];
-    const deltaX = touch.clientX - this.dragStartX;
-    const deltaY = touch.clientY - this.dragStartY;
-
-    let newWidth = this.startWidth;
-    let newHeight = this.startHeight;
-    let newPanX = this.startPanX;
-    let newPanY = this.startPanY;
-
-    switch (this.resizeHandle) {
-      case 'se':
-        newWidth = this.startWidth + deltaX / this.zoom;
-        newHeight = this.startHeight + deltaY / this.zoom;
-        break;
-      case 'sw':
-        newWidth = this.startWidth - deltaX / this.zoom;
-        newHeight = this.startHeight + deltaY / this.zoom;
-        newPanX = this.startPanX + deltaX;
-        break;
-      case 'ne':
-        newWidth = this.startWidth + deltaX / this.zoom;
-        newHeight = this.startHeight - deltaY / this.zoom;
-        newPanY = this.startPanY + deltaY;
-        break;
-      case 'nw':
-        newWidth = this.startWidth - deltaX / this.zoom;
-        newHeight = this.startHeight - deltaY / this.zoom;
-        newPanX = this.startPanX + deltaX;
-        newPanY = this.startPanY + deltaY;
-        break;
-    }
-
-    newWidth = Math.max(CONSTRAINTS.WIDTH.MIN, Math.min(newWidth, CONSTRAINTS.WIDTH.MAX));
-    newHeight = Math.max(CONSTRAINTS.HEIGHT.MIN, Math.min(newHeight, CONSTRAINTS.HEIGHT.MAX));
-
-    this.frameWidth = newWidth;
-    this.frameHeight = newHeight;
-    this.panX = newPanX;
-    this.panY = newPanY;
-
-    this.iframe.width = this.frameWidth;
-    this.iframe.height = this.frameHeight;
-
-    this.querySelector('.width-input').value = Math.round(this.frameWidth);
-    this.querySelector('.height-input').value = Math.round(this.frameHeight);
-
-    this.updateTransform();
-    this.updateIndicators();
   }
 
   // Size and position updates
