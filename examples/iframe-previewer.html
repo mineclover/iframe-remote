@@ -114,6 +114,11 @@
       transform: scale(0.95);
     }
 
+    .control-btn.active {
+      background: #0e639c;
+      color: white;
+    }
+
     .control-btn.danger {
       background: #c72e2e;
       color: white;
@@ -125,6 +130,17 @@
 
     .size-input {
       width: 60px;
+      padding: 4px 8px;
+      background: #1e1e1e;
+      color: #cccccc;
+      border: 1px solid #3e3e42;
+      border-radius: 3px;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .zoom-input {
+      width: 50px;
       padding: 4px 8px;
       background: #1e1e1e;
       color: #cccccc;
@@ -146,11 +162,18 @@
       height: 500px;
       overflow: hidden;
       background: #1e1e1e;
+    }
+
+    .iframe-viewport.move-mode {
       cursor: grab;
     }
 
-    .iframe-viewport.grabbing {
+    .iframe-viewport.move-mode.grabbing {
       cursor: grabbing;
+    }
+
+    .iframe-viewport.click-mode {
+      cursor: default;
     }
 
     .iframe-container {
@@ -159,11 +182,62 @@
       transition: transform 0.1s ease-out;
     }
 
+    .iframe-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+
     .iframe-container iframe {
-      border: 1px solid #3e3e42;
+      border: 2px solid #3e3e42;
       border-radius: 4px;
       background: white;
       display: block;
+      pointer-events: auto;
+    }
+
+    .iframe-viewport.move-mode .iframe-container iframe {
+      pointer-events: none;
+    }
+
+    .resize-handle {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      background: #0e639c;
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      z-index: 10;
+      opacity: 0.8;
+      transition: opacity 0.2s;
+    }
+
+    .resize-handle:hover {
+      opacity: 1;
+      background: #1177bb;
+    }
+
+    .resize-handle.nw {
+      top: -8px;
+      left: -8px;
+      cursor: nw-resize;
+    }
+
+    .resize-handle.ne {
+      top: -8px;
+      right: -8px;
+      cursor: ne-resize;
+    }
+
+    .resize-handle.sw {
+      bottom: -8px;
+      left: -8px;
+      cursor: sw-resize;
+    }
+
+    .resize-handle.se {
+      bottom: -8px;
+      right: -8px;
+      cursor: se-resize;
     }
 
     .zoom-indicator {
@@ -181,6 +255,18 @@
     .position-indicator {
       position: absolute;
       bottom: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      pointer-events: none;
+    }
+
+    .mode-indicator {
+      position: absolute;
+      top: 10px;
       left: 10px;
       background: rgba(0, 0, 0, 0.7);
       color: white;
@@ -249,11 +335,16 @@
         this.width = 800
         this.height = 600
         this.url = 'standalone-child.html'
+        this.mode = 'move' // 'move' or 'click'
         this.isDragging = false
+        this.isResizing = false
+        this.resizeHandle = null
         this.dragStartX = 0
         this.dragStartY = 0
         this.startPanX = 0
         this.startPanY = 0
+        this.startWidth = 0
+        this.startHeight = 0
 
         this.render()
         this.setupEventListeners()
@@ -267,8 +358,13 @@
             <span class="preview-title">Preview #${this.id}</span>
             <div class="preview-controls">
               <div class="control-group">
+                <button class="control-btn mode-toggle active" title="Toggle Mode" data-mode="move">✋ Move</button>
+                <button class="control-btn mode-toggle" title="Toggle Mode" data-mode="click">👆 Click</button>
+              </div>
+              <div class="control-group">
                 <button class="control-btn zoom-out" title="Zoom Out">-</button>
-                <button class="control-btn zoom-reset" title="Reset Zoom">100%</button>
+                <input type="number" class="zoom-input" value="100" min="10" max="300" step="10">
+                <span class="size-label">%</span>
                 <button class="control-btn zoom-in" title="Zoom In">+</button>
               </div>
               <div class="control-group">
@@ -287,10 +383,17 @@
             <input type="text" class="url-input" placeholder="Enter iframe URL" value="${this.url}">
             <button class="load-btn">Load</button>
           </div>
-          <div class="iframe-viewport">
+          <div class="iframe-viewport move-mode">
             <div class="iframe-container">
-              <iframe src="${this.url}" width="${this.width}" height="${this.height}"></iframe>
+              <div class="iframe-wrapper">
+                <iframe src="${this.url}" width="${this.width}" height="${this.height}"></iframe>
+                <div class="resize-handle nw" data-handle="nw"></div>
+                <div class="resize-handle ne" data-handle="ne"></div>
+                <div class="resize-handle sw" data-handle="sw"></div>
+                <div class="resize-handle se" data-handle="se"></div>
+              </div>
             </div>
+            <div class="mode-indicator">Mode: Move</div>
             <div class="zoom-indicator">${Math.round(this.zoom * 100)}%</div>
             <div class="position-indicator">X: ${this.panX} Y: ${this.panY}</div>
           </div>
@@ -301,19 +404,39 @@
         // Get references to elements
         this.viewport = this.wrapper.querySelector('.iframe-viewport')
         this.iframeContainer = this.wrapper.querySelector('.iframe-container')
+        this.iframeWrapper = this.wrapper.querySelector('.iframe-wrapper')
         this.iframe = this.wrapper.querySelector('iframe')
         this.zoomIndicator = this.wrapper.querySelector('.zoom-indicator')
         this.positionIndicator = this.wrapper.querySelector('.position-indicator')
+        this.modeIndicator = this.wrapper.querySelector('.mode-indicator')
         this.urlInput = this.wrapper.querySelector('.url-input')
+        this.zoomInput = this.wrapper.querySelector('.zoom-input')
 
         this.updateTransform()
       }
 
       setupEventListeners() {
+        // Mode toggle
+        const modeToggles = this.wrapper.querySelectorAll('.mode-toggle')
+        modeToggles.forEach(btn => {
+          btn.addEventListener('click', () => {
+            this.mode = btn.dataset.mode
+            modeToggles.forEach(b => b.classList.remove('active'))
+            btn.classList.add('active')
+            this.viewport.className = `iframe-viewport ${this.mode}-mode`
+            this.modeIndicator.textContent = `Mode: ${this.mode === 'move' ? 'Move' : 'Click'}`
+          })
+        })
+
         // Zoom controls
         this.wrapper.querySelector('.zoom-in').addEventListener('click', () => this.zoomIn())
         this.wrapper.querySelector('.zoom-out').addEventListener('click', () => this.zoomOut())
-        this.wrapper.querySelector('.zoom-reset').addEventListener('click', () => this.resetZoom())
+        this.zoomInput.addEventListener('change', (e) => {
+          const value = parseInt(e.target.value)
+          this.zoom = Math.max(0.1, Math.min(value / 100, 3))
+          this.updateTransform()
+          this.updateIndicators()
+        })
 
         // Pan controls
         this.wrapper.querySelector('.reset-pan').addEventListener('click', () => this.resetPan())
@@ -335,25 +458,24 @@
         // Remove button
         this.wrapper.querySelector('.remove-btn').addEventListener('click', () => this.remove())
 
-        // Pan with mouse drag
+        // Pan with mouse drag (only in move mode)
         this.viewport.addEventListener('mousedown', (e) => this.startDrag(e))
         document.addEventListener('mousemove', (e) => this.drag(e))
         document.addEventListener('mouseup', () => this.endDrag())
 
-        // Zoom with mouse wheel
-        this.viewport.addEventListener('wheel', (e) => {
-          e.preventDefault()
-          if (e.deltaY < 0) {
-            this.zoomIn()
-          } else {
-            this.zoomOut()
-          }
-        }, { passive: false })
+        // Resize handles
+        const handles = this.wrapper.querySelectorAll('.resize-handle')
+        handles.forEach(handle => {
+          handle.addEventListener('mousedown', (e) => this.startResize(e, handle.dataset.handle))
+        })
       }
 
       startDrag(e) {
-        // Ignore if clicking on iframe content
-        if (e.target === this.iframe) return
+        if (this.mode !== 'move') return
+        if (this.isResizing) return
+
+        // Check if clicking on resize handle
+        if (e.target.classList.contains('resize-handle')) return
 
         this.isDragging = true
         this.dragStartX = e.clientX
@@ -364,21 +486,89 @@
       }
 
       drag(e) {
-        if (!this.isDragging) return
+        if (this.isDragging) {
+          const deltaX = e.clientX - this.dragStartX
+          const deltaY = e.clientY - this.dragStartY
 
-        const deltaX = e.clientX - this.dragStartX
-        const deltaY = e.clientY - this.dragStartY
+          this.panX = this.startPanX + deltaX
+          this.panY = this.startPanY + deltaY
 
-        this.panX = this.startPanX + deltaX
-        this.panY = this.startPanY + deltaY
-
-        this.updateTransform()
-        this.updateIndicators()
+          this.updateTransform()
+          this.updateIndicators()
+        } else if (this.isResizing) {
+          this.doResize(e)
+        }
       }
 
       endDrag() {
         this.isDragging = false
+        this.isResizing = false
+        this.resizeHandle = null
         this.viewport.classList.remove('grabbing')
+      }
+
+      startResize(e, handle) {
+        e.stopPropagation()
+        this.isResizing = true
+        this.resizeHandle = handle
+        this.dragStartX = e.clientX
+        this.dragStartY = e.clientY
+        this.startWidth = this.width
+        this.startHeight = this.height
+        this.startPanX = this.panX
+        this.startPanY = this.panY
+      }
+
+      doResize(e) {
+        const deltaX = e.clientX - this.dragStartX
+        const deltaY = e.clientY - this.dragStartY
+
+        let newWidth = this.startWidth
+        let newHeight = this.startHeight
+        let newPanX = this.startPanX
+        let newPanY = this.startPanY
+
+        // Calculate new dimensions based on handle
+        switch (this.resizeHandle) {
+          case 'se': // bottom-right
+            newWidth = this.startWidth + deltaX / this.zoom
+            newHeight = this.startHeight + deltaY / this.zoom
+            break
+          case 'sw': // bottom-left
+            newWidth = this.startWidth - deltaX / this.zoom
+            newHeight = this.startHeight + deltaY / this.zoom
+            newPanX = this.startPanX + deltaX
+            break
+          case 'ne': // top-right
+            newWidth = this.startWidth + deltaX / this.zoom
+            newHeight = this.startHeight - deltaY / this.zoom
+            newPanY = this.startPanY + deltaY
+            break
+          case 'nw': // top-left
+            newWidth = this.startWidth - deltaX / this.zoom
+            newHeight = this.startHeight - deltaY / this.zoom
+            newPanX = this.startPanX + deltaX
+            newPanY = this.startPanY + deltaY
+            break
+        }
+
+        // Clamp dimensions
+        newWidth = Math.max(100, Math.min(newWidth, 3840))
+        newHeight = Math.max(100, Math.min(newHeight, 2160))
+
+        this.width = newWidth
+        this.height = newHeight
+        this.panX = newPanX
+        this.panY = newPanY
+
+        this.iframe.width = this.width
+        this.iframe.height = this.height
+
+        this.wrapper.querySelector('.width-input').value = Math.round(this.width)
+        this.wrapper.querySelector('.height-input').value = Math.round(this.height)
+
+        this.updateTransform()
+        this.updateIndicators()
       }
 
       zoomIn() {
@@ -389,12 +579,6 @@
 
       zoomOut() {
         this.zoom = Math.max(this.zoom - 0.1, 0.1)
-        this.updateTransform()
-        this.updateIndicators()
-      }
-
-      resetZoom() {
-        this.zoom = 1
         this.updateTransform()
         this.updateIndicators()
       }
@@ -432,6 +616,7 @@
 
       updateIndicators() {
         this.zoomIndicator.textContent = `${Math.round(this.zoom * 100)}%`
+        this.zoomInput.value = Math.round(this.zoom * 100)
         this.positionIndicator.textContent = `X: ${Math.round(this.panX)} Y: ${Math.round(this.panY)}`
       }
 

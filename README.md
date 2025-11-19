@@ -170,9 +170,11 @@ npm run serve
 ```
 
 **Controls per frame:**
-- `+/-` buttons or mouse wheel to zoom
-- Drag viewport to pan
-- Width/Height inputs to resize iframe
+- **Move/Click Mode** - Toggle between move mode (pan enabled) and click mode (interact with iframe)
+- `+/-` buttons or zoom input to adjust zoom level (10-300%)
+- Drag viewport to pan (in move mode)
+- Corner handles to resize iframe by dragging
+- Width/Height inputs to resize iframe dimensions
 - URL input to load different pages
 - `⌖` button to reset position
 - `✕` button to remove preview
