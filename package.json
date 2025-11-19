@@ -22,7 +22,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch",
+    "dev": "vite",
+    "dev:tsc": "tsc --watch",
     "serve": "npx serve . -p 3000 --no-clipboard --no-port-switching",
     "test": "vitest run && playwright test",
     "test:unit": "vitest run",
@@ -40,6 +41,7 @@
     "jsdom": "^27.2.0",
     "serve": "^14.2.5",
     "typescript": "^5.0.0",
+    "vite": "^7.2.2",
     "vitest": "^4.0.6"
   },
   "keywords": [
