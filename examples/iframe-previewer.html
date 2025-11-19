@@ -105,33 +105,20 @@
       background: #2d2d30;
       padding: 12px 15px;
       display: flex;
-      justify-content: space-between;
+      gap: 12px;
       align-items: center;
       border-bottom: 1px solid #3e3e42;
     }
 
-    .preview-title {
+    .preview-id {
       font-size: 14px;
-      font-weight: 500;
+      font-weight: 600;
       color: #cccccc;
-    }
-
-    .preview-controls {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .control-group {
-      display: flex;
-      gap: 4px;
-      padding: 4px;
-      background: #1e1e1e;
-      border-radius: 4px;
+      min-width: 30px;
     }
 
     .control-btn {
-      padding: 6px 10px;
+      padding: 6px 12px;
       background: #3e3e42;
       color: #cccccc;
       border: none;
@@ -139,7 +126,7 @@
       cursor: pointer;
       font-size: 12px;
       transition: all 0.2s;
-      min-width: 32px;
+      white-space: nowrap;
     }
 
     .control-btn:hover {
@@ -151,41 +138,49 @@
       transform: scale(0.95);
     }
 
-    .control-btn.danger {
+    .url-input {
+      flex: 1;
+      padding: 6px 12px;
+      background: #1e1e1e;
+      color: #cccccc;
+      border: 1px solid #3e3e42;
+      border-radius: 3px;
+      font-size: 13px;
+    }
+
+    .url-input:focus {
+      outline: none;
+      border-color: #0e639c;
+    }
+
+    .load-btn {
+      padding: 6px 16px;
+      background: #0e639c;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .load-btn:hover {
+      background: #1177bb;
+    }
+
+    .remove-btn {
+      padding: 6px 12px;
       background: #c72e2e;
       color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
     }
 
-    .control-btn.danger:hover {
+    .remove-btn:hover {
       background: #e03e3e;
-    }
-
-    .size-input {
-      width: 60px;
-      padding: 4px 8px;
-      background: #1e1e1e;
-      color: #cccccc;
-      border: 1px solid #3e3e42;
-      border-radius: 3px;
-      font-size: 12px;
-      text-align: center;
-    }
-
-    .zoom-input {
-      width: 50px;
-      padding: 4px 8px;
-      background: #1e1e1e;
-      color: #cccccc;
-      border: 1px solid #3e3e42;
-      border-radius: 3px;
-      font-size: 12px;
-      text-align: center;
-    }
-
-    .size-label {
-      font-size: 11px;
-      color: #858585;
-      margin: 0 4px;
     }
 
     .iframe-viewport {
@@ -272,55 +267,6 @@
       cursor: se-resize;
     }
 
-    .zoom-controls {
-      position: absolute;
-      bottom: 10px;
-      left: 10px;
-      display: flex;
-      gap: 4px;
-      padding: 6px;
-      background: rgba(0, 0, 0, 0.8);
-      border-radius: 4px;
-      align-items: center;
-      z-index: 5;
-    }
-
-    .zoom-controls .control-btn {
-      min-width: 28px;
-      padding: 4px 8px;
-    }
-
-    .zoom-controls .zoom-input {
-      width: 45px;
-    }
-
-    .info-panel {
-      position: absolute;
-      bottom: 10px;
-      right: 10px;
-      background: rgba(0, 0, 0, 0.8);
-      color: white;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-size: 11px;
-      z-index: 5;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .info-line {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .info-line .size-input {
-      width: 55px;
-      font-size: 11px;
-      padding: 2px 4px;
-    }
-
     .mode-indicator {
       position: absolute;
       top: 10px;
@@ -334,58 +280,69 @@
       z-index: 5;
     }
 
-    .url-input-container {
-      padding: 12px 15px;
+    .controls-bar {
       background: #2d2d30;
-      border-bottom: 1px solid #3e3e42;
+      padding: 8px 15px;
       display: flex;
-      gap: 8px;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      border-top: 1px solid #3e3e42;
+    }
+
+    .zoom-controls {
+      display: flex;
+      gap: 6px;
       align-items: center;
     }
 
-    .url-input {
-      flex: 1;
-      padding: 8px 12px;
+    .zoom-controls .control-btn {
+      min-width: 28px;
+      padding: 4px 8px;
+    }
+
+    .zoom-input {
+      width: 50px;
+      padding: 4px 8px;
       background: #1e1e1e;
       color: #cccccc;
       border: 1px solid #3e3e42;
-      border-radius: 4px;
-      font-size: 13px;
+      border-radius: 3px;
+      font-size: 12px;
+      text-align: center;
     }
 
-    .url-input:focus {
-      outline: none;
-      border-color: #0e639c;
+    .info-controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
     }
 
-    .load-btn {
-      padding: 8px 16px;
-      background: #0e639c;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 500;
+    .info-group {
+      display: flex;
+      gap: 6px;
+      align-items: center;
     }
 
-    .load-btn:hover {
-      background: #1177bb;
+    .size-input {
+      width: 60px;
+      padding: 4px 8px;
+      background: #1e1e1e;
+      color: #cccccc;
+      border: 1px solid #3e3e42;
+      border-radius: 3px;
+      font-size: 12px;
+      text-align: center;
     }
 
-    .remove-btn {
-      padding: 8px 12px;
-      background: #c72e2e;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 500;
+    .size-label {
+      font-size: 11px;
+      color: #858585;
     }
 
-    .remove-btn:hover {
-      background: #e03e3e;
+    .position-text {
+      font-size: 11px;
+      color: #cccccc;
     }
   </style>
 </head>
@@ -439,14 +396,8 @@
         this.wrapper.className = 'preview-wrapper'
         this.wrapper.innerHTML = `
           <div class="preview-header">
-            <span class="preview-title">Preview #${this.id}</span>
-            <div class="preview-controls">
-              <div class="control-group">
-                <button class="control-btn reset-pan" title="Reset Position">⌖ Reset</button>
-              </div>
-            </div>
-          </div>
-          <div class="url-input-container">
+            <span class="preview-id">#${this.id}</span>
+            <button class="control-btn reset-pan" title="Reset Position">⌖ Reset</button>
             <input type="text" class="url-input" placeholder="Enter iframe URL" value="${this.url}">
             <button class="load-btn">Load</button>
             <button class="remove-btn">✕ Remove</button>
@@ -462,20 +413,21 @@
               </div>
             </div>
             <div class="mode-indicator">Mode: Move</div>
+          </div>
+          <div class="controls-bar">
             <div class="zoom-controls">
               <button class="control-btn zoom-out" title="Zoom Out">-</button>
               <input type="number" class="zoom-input" value="100" min="10" max="300" step="10">
               <span class="size-label">%</span>
               <button class="control-btn zoom-in" title="Zoom In">+</button>
             </div>
-            <div class="info-panel">
-              <div class="info-line">
-                <span class="size-label">Position:</span>
-                <span class="position-text">X: ${this.panX} Y: ${this.panY}</span>
-              </div>
-              <div class="info-line">
+            <div class="info-controls">
+              <span class="position-text">X: ${this.panX} Y: ${this.panY}</span>
+              <div class="info-group">
                 <span class="size-label">W:</span>
                 <input type="number" class="size-input width-input" value="${this.width}" min="100" max="3840">
+              </div>
+              <div class="info-group">
                 <span class="size-label">H:</span>
                 <input type="number" class="size-input height-input" value="${this.height}" min="100" max="2160">
               </div>
@@ -550,10 +502,8 @@
         if (globalMode !== 'move') return
         if (this.isResizing) return
 
-        // Check if clicking on resize handle or controls
+        // Check if clicking on resize handle
         if (e.target.classList.contains('resize-handle')) return
-        if (e.target.closest('.zoom-controls')) return
-        if (e.target.closest('.info-panel')) return
 
         this.isDragging = true
         this.dragStartX = e.clientX
