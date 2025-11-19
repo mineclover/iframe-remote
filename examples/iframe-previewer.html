@@ -27,11 +27,48 @@
       padding: 15px;
       background: #252526;
       border-radius: 8px;
+      gap: 20px;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 20px;
     }
 
     .header h1 {
       font-size: 24px;
       font-weight: 600;
+    }
+
+    .global-mode-control {
+      display: flex;
+      gap: 4px;
+      padding: 4px;
+      background: #1e1e1e;
+      border-radius: 4px;
+    }
+
+    .mode-btn {
+      padding: 8px 16px;
+      background: #3e3e42;
+      color: #cccccc;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+
+    .mode-btn:hover {
+      background: #505050;
+      color: #ffffff;
+    }
+
+    .mode-btn.active {
+      background: #0e639c;
+      color: white;
     }
 
     .add-preview-btn {
@@ -112,11 +149,6 @@
 
     .control-btn:active {
       transform: scale(0.95);
-    }
-
-    .control-btn.active {
-      background: #0e639c;
-      color: white;
     }
 
     .control-btn.danger {
@@ -318,13 +350,24 @@
 </head>
 <body>
   <div class="header">
-    <h1>Iframe Previewer</h1>
+    <div class="header-left">
+      <h1>Iframe Previewer</h1>
+      <div class="global-mode-control">
+        <button class="mode-btn active" data-mode="move">✋ Move Mode</button>
+        <button class="mode-btn" data-mode="click">👆 Click Mode</button>
+      </div>
+    </div>
     <button class="add-preview-btn" id="add-preview">+ Add Preview</button>
   </div>
 
   <div class="previews-container" id="previews-container"></div>
 
-  <script type="module">
+  <script>
+    // Global state
+    let globalMode = 'move'
+    const previews = new Map()
+    let nextId = 1
+
     class IframePreview {
       constructor(container, id) {
         this.container = container
@@ -335,7 +378,6 @@
         this.width = 800
         this.height = 600
         this.url = 'standalone-child.html'
-        this.mode = 'move' // 'move' or 'click'
         this.isDragging = false
         this.isResizing = false
         this.resizeHandle = null
@@ -348,6 +390,7 @@
 
         this.render()
         this.setupEventListeners()
+        this.updateMode(globalMode)
       }
 
       render() {
@@ -357,10 +400,6 @@
           <div class="preview-header">
             <span class="preview-title">Preview #${this.id}</span>
             <div class="preview-controls">
-              <div class="control-group">
-                <button class="control-btn mode-toggle active" title="Toggle Mode" data-mode="move">✋ Move</button>
-                <button class="control-btn mode-toggle" title="Toggle Mode" data-mode="click">👆 Click</button>
-              </div>
               <div class="control-group">
                 <button class="control-btn zoom-out" title="Zoom Out">-</button>
                 <input type="number" class="zoom-input" value="100" min="10" max="300" step="10">
@@ -383,7 +422,7 @@
             <input type="text" class="url-input" placeholder="Enter iframe URL" value="${this.url}">
             <button class="load-btn">Load</button>
           </div>
-          <div class="iframe-viewport move-mode">
+          <div class="iframe-viewport">
             <div class="iframe-container">
               <div class="iframe-wrapper">
                 <iframe src="${this.url}" width="${this.width}" height="${this.height}"></iframe>
@@ -416,18 +455,6 @@
       }
 
       setupEventListeners() {
-        // Mode toggle
-        const modeToggles = this.wrapper.querySelectorAll('.mode-toggle')
-        modeToggles.forEach(btn => {
-          btn.addEventListener('click', () => {
-            this.mode = btn.dataset.mode
-            modeToggles.forEach(b => b.classList.remove('active'))
-            btn.classList.add('active')
-            this.viewport.className = `iframe-viewport ${this.mode}-mode`
-            this.modeIndicator.textContent = `Mode: ${this.mode === 'move' ? 'Move' : 'Click'}`
-          })
-        })
-
         // Zoom controls
         this.wrapper.querySelector('.zoom-in').addEventListener('click', () => this.zoomIn())
         this.wrapper.querySelector('.zoom-out').addEventListener('click', () => this.zoomOut())
@@ -470,8 +497,13 @@
         })
       }
 
+      updateMode(mode) {
+        this.viewport.className = `iframe-viewport ${mode}-mode`
+        this.modeIndicator.textContent = `Mode: ${mode === 'move' ? 'Move' : 'Click'}`
+      }
+
       startDrag(e) {
-        if (this.mode !== 'move') return
+        if (globalMode !== 'move') return
         if (this.isResizing) return
 
         // Check if clicking on resize handle
@@ -626,11 +658,26 @@
       }
     }
 
+    // Global mode control
+    const modeButtons = document.querySelectorAll('.mode-btn')
+    modeButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        globalMode = btn.dataset.mode
+
+        // Update button states
+        modeButtons.forEach(b => b.classList.remove('active'))
+        btn.classList.add('active')
+
+        // Update all previews
+        previews.forEach(preview => {
+          preview.updateMode(globalMode)
+        })
+      })
+    })
+
     // Preview management
     const previewsContainer = document.getElementById('previews-container')
     const addPreviewBtn = document.getElementById('add-preview')
-    const previews = new Map()
-    let nextId = 1
 
     function addPreview() {
       const id = nextId++
