@@ -80,9 +80,15 @@ export class ChildDevTools {
     const functions = new Map<string, Function>()
 
     try {
-      // Scan window object
       const win = window as any
-      for (const key in win) {
+
+      // Use Object.getOwnPropertyNames if includeWindowProps, otherwise use for...in
+      // This avoids double iteration over enumerable properties
+      const keys = this.options.includeWindowProps
+        ? Object.getOwnPropertyNames(win)
+        : Object.keys(win)
+
+      for (const key of keys) {
         try {
           const value = win[key]
           if (typeof value === 'function' && this.matchesPattern(key)) {
@@ -90,22 +96,6 @@ export class ChildDevTools {
           }
         } catch (e) {
           // Skip properties that throw errors on access
-        }
-      }
-
-      // Also check Object.getOwnPropertyNames for non-enumerable properties
-      if (this.options.includeWindowProps) {
-        const propNames = Object.getOwnPropertyNames(win)
-        for (const key of propNames) {
-          try {
-            if (functions.has(key)) continue
-            const value = win[key]
-            if (typeof value === 'function' && this.matchesPattern(key)) {
-              functions.set(key, value)
-            }
-          } catch (e) {
-            // Skip
-          }
         }
       }
     } catch (error) {
@@ -201,7 +191,7 @@ export class ChildDevTools {
    * Manually expose a function
    */
   public expose(name: string, fn: Function): void {
-    if (!this.matchesPattern(name)) {
+    if (!this.matchesPattern(name) && this.options.debug) {
       console.warn(`Function name "${name}" doesn't match the pattern, but exposing anyway`)
     }
     this.exposedFunctions.set(name, fn)

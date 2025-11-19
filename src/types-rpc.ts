@@ -59,12 +59,17 @@ export interface RPCResponseMessage<T = any> {
 }
 
 /**
+ * RPC error codes
+ */
+export type RPCErrorCode = 'TIMEOUT' | 'ABORTED' | 'SEND_ERROR'
+
+/**
  * RPC error
  */
 export class RPCError extends Error {
   constructor(
     message: string,
-    public code?: string,
+    public code?: RPCErrorCode,
     public data?: any
   ) {
     super(message)
