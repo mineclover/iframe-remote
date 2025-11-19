@@ -2,6 +2,17 @@
  * IframePreview Web Component
  * Borderless Segmented Toolbar style preview component
  */
+
+// Constants
+const CONSTRAINTS = {
+  WIDTH: { MIN: 100, MAX: 3840, DEFAULT: 800 },
+  HEIGHT: { MIN: 100, MAX: 2160, DEFAULT: 600 },
+  ZOOM: { MIN: 0.1, MAX: 3, STEP: 0.1, DEFAULT: 1 },
+  VIEWPORT: { HEIGHT: 500 },
+  HEADER: { HEIGHT: 32 },
+  CONTROLS: { HEIGHT: 28 },
+};
+
 class IframePreview extends HTMLElement {
   static observedAttributes = ['url', 'width', 'height', 'mode'];
 
@@ -9,11 +20,11 @@ class IframePreview extends HTMLElement {
     super();
 
     // State
-    this.zoom = 1;
+    this.zoom = CONSTRAINTS.ZOOM.DEFAULT;
     this.panX = 0;
     this.panY = 0;
-    this.frameWidth = 800;
-    this.frameHeight = 600;
+    this.frameWidth = CONSTRAINTS.WIDTH.DEFAULT;
+    this.frameHeight = CONSTRAINTS.HEIGHT.DEFAULT;
     this.frameUrl = './standalone-child.html';
     this.isDragging = false;
     this.isResizing = false;
@@ -25,6 +36,11 @@ class IframePreview extends HTMLElement {
     this.startWidth = 0;
     this.startHeight = 0;
     this._mode = 'move'; // 'move' or 'click'
+
+    // Bind methods for event listener cleanup
+    this.boundDrag = (e) => this.drag(e);
+    this.boundDragTouch = (e) => this.dragTouch(e);
+    this.boundEndDrag = () => this.endDrag();
   }
 
   connectedCallback() {
@@ -70,6 +86,15 @@ class IframePreview extends HTMLElement {
       this._mode = newValue;
       this.updateMode(newValue);
     }
+  }
+
+  disconnectedCallback() {
+    // Clean up document-level event listeners to prevent memory leaks
+    document.removeEventListener('mousemove', this.boundDrag);
+    document.removeEventListener('mouseup', this.boundEndDrag);
+    document.removeEventListener('touchmove', this.boundDragTouch);
+    document.removeEventListener('touchend', this.boundEndDrag);
+    document.removeEventListener('touchcancel', this.boundEndDrag);
   }
 
   // Mode property with getter/setter
@@ -384,7 +409,7 @@ class IframePreview extends HTMLElement {
     this.querySelector('.zoom-out').addEventListener('click', () => this.zoomOut());
     this.zoomInput.addEventListener('change', (e) => {
       const value = parseInt(e.target.value);
-      this.zoom = Math.max(0.1, Math.min(value / 100, 3));
+      this.zoom = Math.max(CONSTRAINTS.ZOOM.MIN, Math.min(value / 100, CONSTRAINTS.ZOOM.MAX));
       this.updateTransform();
       this.updateIndicators();
     });
@@ -411,14 +436,14 @@ class IframePreview extends HTMLElement {
 
     // Pan with drag (mouse)
     this.viewport.addEventListener('mousedown', (e) => this.startDrag(e));
-    document.addEventListener('mousemove', (e) => this.drag(e));
-    document.addEventListener('mouseup', () => this.endDrag());
+    document.addEventListener('mousemove', this.boundDrag);
+    document.addEventListener('mouseup', this.boundEndDrag);
 
     // Pan with drag (touch)
     this.viewport.addEventListener('touchstart', (e) => this.startDragTouch(e), { passive: false });
-    document.addEventListener('touchmove', (e) => this.dragTouch(e), { passive: false });
-    document.addEventListener('touchend', () => this.endDrag());
-    document.addEventListener('touchcancel', () => this.endDrag());
+    document.addEventListener('touchmove', this.boundDragTouch, { passive: false });
+    document.addEventListener('touchend', this.boundEndDrag);
+    document.addEventListener('touchcancel', this.boundEndDrag);
 
     // Resize handles
     const handles = this.querySelectorAll('.resize-handle');
@@ -449,13 +474,13 @@ class IframePreview extends HTMLElement {
 
   // Zoom methods
   zoomIn() {
-    this.zoom = Math.min(this.zoom + 0.1, 3);
+    this.zoom = Math.min(this.zoom + CONSTRAINTS.ZOOM.STEP, CONSTRAINTS.ZOOM.MAX);
     this.updateTransform();
     this.updateIndicators();
   }
 
   zoomOut() {
-    this.zoom = Math.max(this.zoom - 0.1, 0.1);
+    this.zoom = Math.max(this.zoom - CONSTRAINTS.ZOOM.STEP, CONSTRAINTS.ZOOM.MIN);
     this.updateTransform();
     this.updateIndicators();
   }
@@ -577,8 +602,8 @@ class IframePreview extends HTMLElement {
         break;
     }
 
-    newWidth = Math.max(100, Math.min(newWidth, 3840));
-    newHeight = Math.max(100, Math.min(newHeight, 2160));
+    newWidth = Math.max(CONSTRAINTS.WIDTH.MIN, Math.min(newWidth, CONSTRAINTS.WIDTH.MAX));
+    newHeight = Math.max(CONSTRAINTS.HEIGHT.MIN, Math.min(newHeight, CONSTRAINTS.HEIGHT.MAX));
 
     this.frameWidth = newWidth;
     this.frameHeight = newHeight;
@@ -644,8 +669,8 @@ class IframePreview extends HTMLElement {
         break;
     }
 
-    newWidth = Math.max(100, Math.min(newWidth, 3840));
-    newHeight = Math.max(100, Math.min(newHeight, 2160));
+    newWidth = Math.max(CONSTRAINTS.WIDTH.MIN, Math.min(newWidth, CONSTRAINTS.WIDTH.MAX));
+    newHeight = Math.max(CONSTRAINTS.HEIGHT.MIN, Math.min(newHeight, CONSTRAINTS.HEIGHT.MAX));
 
     this.frameWidth = newWidth;
     this.frameHeight = newHeight;
@@ -664,8 +689,8 @@ class IframePreview extends HTMLElement {
 
   // Size and position updates
   updateSize(width, height) {
-    this.frameWidth = Math.max(100, Math.min(width, 3840));
-    this.frameHeight = Math.max(100, Math.min(height, 2160));
+    this.frameWidth = Math.max(CONSTRAINTS.WIDTH.MIN, Math.min(width, CONSTRAINTS.WIDTH.MAX));
+    this.frameHeight = Math.max(CONSTRAINTS.HEIGHT.MIN, Math.min(height, CONSTRAINTS.HEIGHT.MAX));
     this.iframe.width = this.frameWidth;
     this.iframe.height = this.frameHeight;
     this.querySelector('.width-input').value = this.frameWidth;
