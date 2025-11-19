@@ -96,9 +96,9 @@
 
     .preview-wrapper {
       background: #252526;
-      border-radius: 8px;
+      border-radius: 4px;
       overflow: hidden;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
     }
 
     .preview-header {
@@ -107,7 +107,7 @@
       display: flex;
       gap: 12px;
       align-items: center;
-      border-bottom: 1px solid #3e3e42;
+      border-bottom: 1px solid #2a2a2a;
     }
 
     .preview-id {
@@ -287,7 +287,7 @@
       justify-content: space-between;
       align-items: center;
       gap: 12px;
-      border-top: 1px solid #3e3e42;
+      border-top: 1px solid #2a2a2a;
     }
 
     .zoom-controls {
@@ -340,9 +340,15 @@
       color: #858585;
     }
 
-    .position-text {
-      font-size: 11px;
+    .position-input {
+      width: 55px;
+      padding: 4px 8px;
+      background: #1e1e1e;
       color: #cccccc;
+      border: 1px solid #3e3e42;
+      border-radius: 3px;
+      font-size: 12px;
+      text-align: center;
     }
   </style>
 </head>
@@ -422,7 +428,14 @@
               <button class="control-btn zoom-in" title="Zoom In">+</button>
             </div>
             <div class="info-controls">
-              <span class="position-text">X: ${this.panX} Y: ${this.panY}</span>
+              <div class="info-group">
+                <span class="size-label">X:</span>
+                <input type="number" class="position-input x-input" value="${this.panX}">
+              </div>
+              <div class="info-group">
+                <span class="size-label">Y:</span>
+                <input type="number" class="position-input y-input" value="${this.panY}">
+              </div>
               <div class="info-group">
                 <span class="size-label">W:</span>
                 <input type="number" class="size-input width-input" value="${this.width}" min="100" max="3840">
@@ -442,7 +455,8 @@
         this.iframeContainer = this.wrapper.querySelector('.iframe-container')
         this.iframeWrapper = this.wrapper.querySelector('.iframe-wrapper')
         this.iframe = this.wrapper.querySelector('iframe')
-        this.positionText = this.wrapper.querySelector('.position-text')
+        this.xInput = this.wrapper.querySelector('.x-input')
+        this.yInput = this.wrapper.querySelector('.y-input')
         this.modeIndicator = this.wrapper.querySelector('.mode-indicator')
         this.urlInput = this.wrapper.querySelector('.url-input')
         this.zoomInput = this.wrapper.querySelector('.zoom-input')
@@ -470,6 +484,10 @@
 
         widthInput.addEventListener('change', (e) => this.updateSize(parseInt(e.target.value), this.height))
         heightInput.addEventListener('change', (e) => this.updateSize(this.width, parseInt(e.target.value)))
+
+        // Position controls
+        this.xInput.addEventListener('change', (e) => this.updatePosition(parseInt(e.target.value) || 0, this.panY))
+        this.yInput.addEventListener('change', (e) => this.updatePosition(this.panX, parseInt(e.target.value) || 0))
 
         // URL controls
         const loadBtn = this.wrapper.querySelector('.load-btn')
@@ -630,6 +648,13 @@
         this.wrapper.querySelector('.height-input').value = this.height
       }
 
+      updatePosition(x, y) {
+        this.panX = x
+        this.panY = y
+        this.updateTransform()
+        this.updateIndicators()
+      }
+
       loadUrl() {
         const url = this.urlInput.value.trim()
         if (url) {
@@ -644,7 +669,8 @@
 
       updateIndicators() {
         this.zoomInput.value = Math.round(this.zoom * 100)
-        this.positionText.textContent = `X: ${Math.round(this.panX)} Y: ${Math.round(this.panY)}`
+        this.xInput.value = Math.round(this.panX)
+        this.yInput.value = Math.round(this.panY)
       }
 
       remove() {
