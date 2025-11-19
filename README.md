@@ -149,6 +149,34 @@ See `/examples` directory:
 - `standalone-devtools-parent.html` / `standalone-devtools-child.html` - file:// compatible
 - `practical-examples.ts` - Real-world use cases
 - `typed-metadata-example.ts` - Type-safe metadata
+- `iframe-previewer.html` - Multi-frame previewer with zoom/pan/resize controls
+
+### Iframe Previewer
+
+A powerful iframe previewer with multiple frame support and interactive controls:
+
+**Features:**
+- 🔍 **Zoom Control** - Zoom in/out (10-300%) with mouse wheel or buttons
+- 🖐️ **Pan Control** - Drag to pan the iframe viewport
+- 📏 **Resize Control** - Adjust iframe dimensions (100x100 to 3840x2160)
+- 🎯 **Multi-Frame** - Add multiple previews to the same screen
+- 🔄 **Dynamic URLs** - Load different URLs in each iframe
+- 📊 **Real-time Indicators** - Display current zoom level and pan position
+
+**Usage:**
+```bash
+npm run serve
+# Open http://localhost:3000/examples/iframe-previewer.html
+```
+
+**Controls per frame:**
+- `+/-` buttons or mouse wheel to zoom
+- Drag viewport to pan
+- Width/Height inputs to resize iframe
+- URL input to load different pages
+- `⌖` button to reset position
+- `✕` button to remove preview
+- `+ Add Preview` to add new frames
 
 ## Documentation
 
