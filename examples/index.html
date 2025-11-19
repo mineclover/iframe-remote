@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>iframe-remote Examples</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: #1e1e1e;
+      color: #ffffff;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 40px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      font-size: 18px;
+      color: #858585;
+    }
+
+    .category {
+      margin-bottom: 40px;
+      background: #252526;
+      border-radius: 8px;
+      padding: 25px;
+      border: 1px solid #3e3e42;
+    }
+
+    .category h2 {
+      font-size: 24px;
+      margin-bottom: 20px;
+      color: #4ec9b0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .examples-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 15px;
+    }
+
+    .example-card {
+      background: #2d2d30;
+      border: 1px solid #3e3e42;
+      border-radius: 6px;
+      padding: 20px;
+      transition: all 0.2s;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .example-card:hover {
+      border-color: #0e639c;
+      background: #323233;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .example-card h3 {
+      font-size: 16px;
+      margin-bottom: 8px;
+      color: #cccccc;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .example-card p {
+      font-size: 13px;
+      color: #858585;
+      line-height: 1.5;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      background: #0e639c;
+      color: white;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: auto;
+    }
+
+    .badge.new {
+      background: #4ec9b0;
+      color: #1e1e1e;
+    }
+
+    .badge.bundle {
+      background: #f48771;
+    }
+
+    .footer {
+      margin-top: 60px;
+      text-align: center;
+      color: #858585;
+      font-size: 14px;
+    }
+
+    .footer a {
+      color: #4ec9b0;
+      text-decoration: none;
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>iframe-remote Examples</h1>
+      <p class="subtitle">Type-safe bidirectional iframe communication library</p>
+    </header>
+
+    <div class="category">
+      <h2>🎯 Main Demos</h2>
+      <div class="examples-grid">
+        <a href="./iframe-previewer.html" class="example-card">
+          <h3>
+            Iframe Previewer
+            <span class="badge new">Featured</span>
+          </h3>
+          <p>Multi-frame previewer with zoom, pan, and resize controls. Borderless segmented toolbar design.</p>
+        </a>
+
+        <a href="./web-component-demo.html" class="example-card">
+          <h3>
+            Web Component Demo
+            <span class="badge bundle">Bundle</span>
+          </h3>
+          <p>Web Component + UMD bundle demo. Test parent-child communication with custom elements.</p>
+        </a>
+      </div>
+    </div>
+
+    <div class="category">
+      <h2>🔧 DevTools Examples</h2>
+      <div class="examples-grid">
+        <a href="./devtools-parent.html" class="example-card">
+          <h3>DevTools Parent</h3>
+          <p>Parent window for DevTools demo. Remote function execution with parameter UI generation.</p>
+        </a>
+
+        <a href="./devtools-child.html" class="example-card">
+          <h3>DevTools Child</h3>
+          <p>Child iframe for DevTools demo. Exposes functions with metadata for remote execution.</p>
+        </a>
+
+        <a href="./standalone-devtools-parent.html" class="example-card">
+          <h3>
+            Standalone DevTools Parent
+            <span class="badge">file://</span>
+          </h3>
+          <p>DevTools parent compatible with file:// protocol. Fully standalone with inlined code.</p>
+        </a>
+
+        <a href="./standalone-devtools-child.html" class="example-card">
+          <h3>
+            Standalone DevTools Child
+            <span class="badge">file://</span>
+          </h3>
+          <p>DevTools child compatible with file:// protocol. No build step required.</p>
+        </a>
+      </div>
+    </div>
+
+    <div class="category">
+      <h2>📡 RPC Examples</h2>
+      <div class="examples-grid">
+        <a href="./rpc-parent.html" class="example-card">
+          <h3>RPC Parent</h3>
+          <p>Type-safe RPC parent. Call child methods with TypeScript-like type safety.</p>
+        </a>
+
+        <a href="./rpc-child.html" class="example-card">
+          <h3>RPC Child</h3>
+          <p>Type-safe RPC child. Register methods for parent to call remotely.</p>
+        </a>
+      </div>
+    </div>
+
+    <div class="category">
+      <h2>💬 Basic Communication</h2>
+      <div class="examples-grid">
+        <a href="./standalone-parent.html" class="example-card">
+          <h3>
+            Standalone Parent
+            <span class="badge">file://</span>
+          </h3>
+          <p>Basic parent window. Standalone version with inlined library code.</p>
+        </a>
+
+        <a href="./standalone-child.html" class="example-card">
+          <h3>
+            Standalone Child
+            <span class="badge">file://</span>
+          </h3>
+          <p>Basic child iframe. Works with file:// protocol for local testing.</p>
+        </a>
+
+        <a href="./standalone-child-bundle.html" class="example-card">
+          <h3>
+            Child Bundle Version
+            <span class="badge bundle">Bundle</span>
+          </h3>
+          <p>Child using UMD bundle. Single script tag, no module imports needed.</p>
+        </a>
+
+        <a href="./parent/index.html" class="example-card">
+          <h3>Parent (Module)</h3>
+          <p>Parent window using ES modules. Demonstrates module-based communication.</p>
+        </a>
+
+        <a href="./child/index.html" class="example-card">
+          <h3>Child (Module)</h3>
+          <p>Child iframe using ES modules. Shows module import pattern.</p>
+        </a>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <p>
+        📦 <strong>iframe-remote</strong> - Type-safe bidirectional iframe communication
+      </p>
+      <p>
+        <a href="https://github.com/anthropics/iframe-remote" target="_blank">GitHub</a> ·
+        <a href="../README.md">Documentation</a>
+      </p>
+    </footer>
+  </div>
+</body>
+</html>

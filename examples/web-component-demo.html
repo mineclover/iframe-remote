@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Component Demo - Parent-Child Communication Test</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: #1e1e1e;
+      color: #ffffff;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 20px;
+      background: #252526;
+      border-bottom: 1px solid #3e3e42;
+      gap: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    .mode-control {
+      display: flex;
+      gap: 4px;
+      padding: 4px;
+      background: #1e1e1e;
+      border-radius: 4px;
+    }
+
+    .mode-btn {
+      padding: 8px 16px;
+      background: #3e3e42;
+      color: #cccccc;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+
+    .mode-btn:hover {
+      background: #505050;
+      color: #ffffff;
+    }
+
+    .mode-btn.active {
+      background: #0e639c;
+      color: white;
+    }
+
+    .container {
+      padding: 20px;
+    }
+
+    .section {
+      margin-bottom: 30px;
+      background: #252526;
+      border-radius: 4px;
+      padding: 20px;
+      border: 1px solid #3e3e42;
+    }
+
+    .section h2 {
+      font-size: 18px;
+      margin-bottom: 15px;
+      color: #4ec9b0;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      background: #0e639c;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+
+    .btn:hover {
+      background: #1177bb;
+    }
+
+    .btn.danger {
+      background: #c72e2e;
+    }
+
+    .btn.danger:hover {
+      background: #e03e3e;
+    }
+
+    .log {
+      background: #1e1e1e;
+      border: 1px solid #3e3e42;
+      border-radius: 4px;
+      padding: 15px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid #2a2a2a;
+    }
+
+    .log-entry.sent {
+      color: #4fc1ff;
+    }
+
+    .log-entry.received {
+      color: #4ec9b0;
+    }
+
+    .log-entry.info {
+      color: #cccccc;
+    }
+
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    input[type="text"] {
+      padding: 8px 12px;
+      background: #1e1e1e;
+      color: #cccccc;
+      border: 1px solid #3e3e42;
+      border-radius: 3px;
+      font-size: 13px;
+      flex: 1;
+      max-width: 300px;
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #0e639c;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🧩 Web Component Demo - Parent-Child Communication</h1>
+    <div class="mode-control">
+      <button class="mode-btn active" data-mode="move">✋ Move Mode</button>
+      <button class="mode-btn" data-mode="click">👆 Click Mode</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="section">
+      <h2>📡 Communication Test</h2>
+      <div class="controls">
+        <input type="text" id="message-input" placeholder="Message to send" value="Hello from parent!">
+        <button class="btn" id="send-message">Send Message</button>
+        <button class="btn" id="request-data">Request Data</button>
+        <button class="btn danger" id="clear-log">Clear Log</button>
+      </div>
+      <div class="log" id="communication-log"></div>
+    </div>
+
+    <div class="section">
+      <h2>📋 Component Info</h2>
+      <div class="controls">
+        <button class="btn" id="get-iframe">Get Iframe Reference</button>
+        <button class="btn" id="get-content-window">Get ContentWindow</button>
+        <button class="btn" id="test-post-message">Test postMessage</button>
+      </div>
+      <div class="log" id="info-log"></div>
+    </div>
+
+    <div class="preview-grid">
+      <iframe-preview id="preview-1" url="./standalone-child-bundle.html" width="800" height="600"></iframe-preview>
+    </div>
+  </div>
+
+  <!-- Load IframeRemote bundle (UMD/IIFE) -->
+  <script src="./dist/iframe-remote.bundle.js"></script>
+
+  <script type="module">
+    import './iframe-preview-component.js';
+
+    // Use from global namespace
+    const { ParentCommunicator } = window.IframeRemote;
+
+    const messageInput = document.getElementById('message-input');
+    const commLog = document.getElementById('communication-log');
+    const infoLog = document.getElementById('info-log');
+    const preview = document.getElementById('preview-1');
+
+    let communicator = null;
+
+    function addCommLog(msg, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      commLog.appendChild(entry);
+      commLog.scrollTop = commLog.scrollHeight;
+    }
+
+    function addInfoLog(msg) {
+      const entry = document.createElement('div');
+      entry.className = 'log-entry info';
+      entry.textContent = msg;
+      infoLog.appendChild(entry);
+      infoLog.scrollTop = infoLog.scrollHeight;
+    }
+
+    // Wait for component to be ready
+    customElements.whenDefined('iframe-preview').then(() => {
+      addInfoLog('✅ Web component defined');
+
+      // Wait for iframe to load
+      const iframe = preview.getIframe();
+      if (iframe) {
+        addInfoLog('✅ Got iframe reference from component');
+
+        iframe.addEventListener('load', () => {
+          addInfoLog('✅ Iframe loaded');
+          addCommLog('Iframe loaded, initializing communication...', 'info');
+
+          const contentWindow = preview.getContentWindow();
+          if (contentWindow) {
+            addInfoLog('✅ Got contentWindow from component');
+            addCommLog('Got contentWindow reference', 'info');
+
+            // Initialize ParentCommunicator
+            communicator = new ParentCommunicator(contentWindow, {
+              targetOrigin: window.location.origin,
+              onMessage: (data) => {
+                addCommLog(`📥 Received: ${JSON.stringify(data)}`, 'received');
+              },
+              onError: (error) => {
+                addCommLog(`❌ Error: ${error.message}`, 'info');
+              }
+            });
+
+            addCommLog('✅ ParentCommunicator initialized', 'info');
+            addInfoLog('✅ ParentCommunicator initialized successfully');
+          } else {
+            addInfoLog('❌ Failed to get contentWindow');
+          }
+        });
+      } else {
+        addInfoLog('❌ Failed to get iframe reference');
+      }
+    });
+
+    // Mode control
+    const modeButtons = document.querySelectorAll('.mode-btn');
+    modeButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const mode = btn.dataset.mode;
+        modeButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        preview.setMode(mode);
+        addInfoLog(`Mode changed to: ${mode}`);
+      });
+    });
+
+    // Communication controls
+    document.getElementById('send-message').addEventListener('click', () => {
+      if (!communicator) {
+        addCommLog('❌ Communicator not ready', 'info');
+        return;
+      }
+
+      const message = messageInput.value;
+      communicator.send({ type: 'message', payload: message });
+      addCommLog(`📤 Sent: ${message}`, 'sent');
+    });
+
+    document.getElementById('request-data').addEventListener('click', async () => {
+      if (!communicator) {
+        addCommLog('❌ Communicator not ready', 'info');
+        return;
+      }
+
+      addCommLog('📤 Requesting data...', 'sent');
+      try {
+        const response = await communicator.request({ type: 'getData' });
+        addCommLog(`📥 Response: ${JSON.stringify(response)}`, 'received');
+      } catch (error) {
+        addCommLog(`❌ Request failed: ${error.message}`, 'info');
+      }
+    });
+
+    document.getElementById('clear-log').addEventListener('click', () => {
+      commLog.innerHTML = '';
+      infoLog.innerHTML = '';
+    });
+
+    // Info controls
+    document.getElementById('get-iframe').addEventListener('click', () => {
+      const iframe = preview.getIframe();
+      addInfoLog(`iframe: ${iframe ? 'Found ✅' : 'Not found ❌'}`);
+      addInfoLog(`  tag: ${iframe?.tagName}`);
+      addInfoLog(`  src: ${iframe?.src}`);
+    });
+
+    document.getElementById('get-content-window').addEventListener('click', () => {
+      const contentWindow = preview.getContentWindow();
+      addInfoLog(`contentWindow: ${contentWindow ? 'Found ✅' : 'Not found ❌'}`);
+      addInfoLog(`  type: ${typeof contentWindow}`);
+      addInfoLog(`  origin: ${contentWindow?.location?.origin || 'N/A'}`);
+    });
+
+    document.getElementById('test-post-message').addEventListener('click', () => {
+      const contentWindow = preview.getContentWindow();
+      if (!contentWindow) {
+        addInfoLog('❌ No contentWindow available');
+        return;
+      }
+
+      const testMessage = { type: 'test', payload: 'Direct postMessage test', timestamp: Date.now() };
+      contentWindow.postMessage(testMessage, '*');
+      addInfoLog('✅ Sent test message via postMessage');
+      addCommLog(`📤 Direct postMessage: ${JSON.stringify(testMessage)}`, 'sent');
+    });
+  </script>
+</body>
+</html>

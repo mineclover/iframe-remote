@@ -21,7 +21,10 @@
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && npm run bundle",
+    "bundle": "npm run bundle:dev && npm run bundle:prod",
+    "bundle:dev": "esbuild src/bundle-entry.ts --bundle --format=iife --global-name=IframeRemote --outfile=dist/iframe-remote.bundle.js --sourcemap",
+    "bundle:prod": "esbuild src/bundle-entry.ts --bundle --format=iife --global-name=IframeRemote --outfile=dist/iframe-remote.bundle.min.js --minify --sourcemap",
     "dev": "vite",
     "dev:tsc": "tsc --watch",
     "serve": "npx serve . -p 3000 --no-clipboard --no-port-switching",

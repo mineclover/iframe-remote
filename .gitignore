@@ -1,7 +1,9 @@
 node_modules/
 dist/
+examples/dist
 *.log
 .DS_Store
 test-results/
 playwright-report/
 playwright/.cache/
+dist-examples/

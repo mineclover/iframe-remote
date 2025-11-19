@@ -5,7 +5,7 @@ export default defineConfig({
   root: './examples',
   server: {
     port: 4500,
-    open: '/iframe-previewer.html',
+    open: '/',
   },
   build: {
     outDir: '../dist-examples',

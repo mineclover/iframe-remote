@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Child - Bundle Version</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      min-height: 100vh;
+    }
+    h1 {
+      margin-top: 0;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+      padding-bottom: 10px;
+    }
+    .info {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .status {
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    button {
+      margin: 5px;
+      padding: 10px 20px;
+      font-size: 14px;
+      cursor: pointer;
+      background: white;
+      color: #667eea;
+      border: none;
+      border-radius: 4px;
+      font-family: inherit;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #f0f0f0;
+    }
+    .log {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 4px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-size: 12px;
+    }
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .log-entry.received {
+      color: #66d9ef;
+    }
+    .log-entry.sent {
+      color: #a6e22e;
+    }
+  </style>
+</head>
+<body>
+  <h1>📦 Child Window - Bundle Version</h1>
+
+  <div class="info">
+    <p><strong>✅ Using:</strong> <code>IframeRemote.ChildCommunicator</code> from bundle</p>
+    <p><strong>📦 Bundle:</strong> One-line script tag, no module imports needed!</p>
+  </div>
+
+  <div class="status">
+    <p><strong>Status:</strong> <span id="status">Initializing...</span></p>
+  </div>
+
+  <div>
+    <h3>Test Communication</h3>
+    <button id="send-to-parent">Send to Parent</button>
+    <button id="request-from-parent">Request from Parent</button>
+  </div>
+
+  <div class="log">
+    <h3>Communication Log</h3>
+    <div id="log-content"></div>
+  </div>
+
+  <!-- Single line to load everything! -->
+  <script src="./dist/iframe-remote.bundle.js"></script>
+
+  <script>
+    // Access from global namespace - no imports needed!
+    const { ChildCommunicator } = window.IframeRemote;
+
+    const statusEl = document.getElementById('status');
+    const logContent = document.getElementById('log-content');
+
+    function addLog(msg, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      logContent.appendChild(entry);
+      logContent.scrollTop = logContent.scrollHeight;
+    }
+
+    // Initialize communicator
+    let communicator;
+
+    try {
+      communicator = new ChildCommunicator({
+        targetOrigin: '*',
+        onMessage: (data) => {
+          addLog(`📥 Received: ${JSON.stringify(data)}`, 'received');
+        },
+        onRequest: async (data) => {
+          addLog(`📥 Request: ${JSON.stringify(data)}`, 'received');
+
+          if (data.type === 'getData') {
+            return {
+              message: 'Data from child',
+              timestamp: Date.now(),
+              random: Math.random(),
+            };
+          }
+
+          return { result: 'ok' };
+        },
+      });
+
+      statusEl.textContent = 'Ready! ✅';
+      addLog('✅ ChildCommunicator initialized from bundle', 'info');
+    } catch (error) {
+      statusEl.textContent = `Error: ${error.message}`;
+      addLog(`❌ Error: ${error.message}`, 'info');
+    }
+
+    // Send to parent button
+    document.getElementById('send-to-parent').addEventListener('click', () => {
+      if (!communicator) return;
+
+      const message = {
+        type: 'childMessage',
+        content: 'Hello from child!',
+        timestamp: Date.now(),
+      };
+
+      communicator.send(message);
+      addLog(`📤 Sent: ${JSON.stringify(message)}`, 'sent');
+    });
+
+    // Request from parent button
+    document.getElementById('request-from-parent').addEventListener('click', async () => {
+      if (!communicator) return;
+
+      addLog('📤 Requesting data from parent...', 'sent');
+
+      try {
+        const response = await communicator.request({ type: 'getData' });
+        addLog(`✅ Response: ${JSON.stringify(response)}`, 'received');
+      } catch (error) {
+        addLog(`❌ Request failed: ${error.message}`, 'info');
+      }
+    });
+
+    // Send ready message to parent
+    if (communicator) {
+      communicator.send({
+        type: 'ready',
+        message: 'Child is ready with bundle!',
+      });
+      addLog('📤 Sent ready message to parent', 'sent');
+    }
+  </script>
+</body>
+</html>

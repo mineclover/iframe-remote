@@ -1,23 +1,55 @@
 # iframe-remote
 
-Type-safe bidirectional iframe communication library with DevTools support.
+Type-safe bidirectional iframe communication library with 3 progressive systems.
+
+## 📦 Three Systems
+
+1. **Basic Communication** - Simple message send/receive & request/response
+2. **RPC System** - Type-safe remote function calls
+3. **DevTools** - Metadata-driven dynamic UI generation
+
+📖 **[Architecture Guide](./ARCHITECTURE.md)** - Detailed system comparison and structure
 
 ## Features
 
 - 🔄 **Bidirectional Communication** - Parent ↔ Child iframe messaging
 - 🎯 **Type-Safe RPC** - Remote procedure calls with TypeScript type safety
 - 🛠️ **DevTools Integration** - Automatic function discovery and remote execution
-- 📋 **Metadata Schema** - Rich parameter metadata for UI generation
+- 📋 **Metadata Schema** - Rich parameter metadata for UI generation (Zod-validated)
 - 🧠 **Auto Type Inference** - Infers parameter types from naming patterns
+- 🧩 **Web Component** - Reusable iframe preview component
 - ✅ **Fully Tested** - Unit tests and E2E tests with Playwright
 
 ## Installation
+
+### NPM Package
 
 ```bash
 npm install iframe-remote
 # or
 pnpm add iframe-remote
 ```
+
+### CDN / Standalone Bundle
+
+For quick prototyping or non-module environments, use the standalone bundle:
+
+```html
+<!-- Load from local build -->
+<script src="./dist/iframe-remote.bundle.min.js"></script>
+
+<script>
+  // Access from global namespace
+  const { ParentCommunicator, ChildCommunicator, ParentRPC, ChildRPC } = window.IframeRemote;
+
+  // Use directly - no imports needed!
+  const comm = new ParentCommunicator(iframe.contentWindow);
+</script>
+```
+
+**Bundle sizes:**
+- Development: `iframe-remote.bundle.js` (~25KB)
+- Production: `iframe-remote.bundle.min.js` (~12KB minified)
 
 ## Quick Start
 
@@ -147,6 +179,9 @@ window.__updateConfig = function(isEnabled, maxRetries, backgroundColor) {
 See `/examples` directory:
 - `devtools-parent.html` / `devtools-child.html` - DevTools demo
 - `standalone-devtools-parent.html` / `standalone-devtools-child.html` - file:// compatible
+- `standalone-child-bundle.html` - Bundle version demo (no module imports!)
+- `web-component-demo.html` - Web Component + Bundle demo
+- `iframe-preview-component.js` - Reusable Web Component
 - `practical-examples.ts` - Real-world use cases
 - `typed-metadata-example.ts` - Type-safe metadata
 - `iframe-previewer.html` - Multi-frame previewer with zoom/pan/resize controls
@@ -182,7 +217,8 @@ npm run serve
 
 ## Documentation
 
-- [Metadata Schema Guide](./docs/METADATA_SCHEMA.md) - Complete reference
+- **[Architecture Guide](./ARCHITECTURE.md)** - Complete system overview and comparison
+- [Metadata Schema Guide](./docs/METADATA_SCHEMA.md) - Parameter types reference
 - [API Documentation](./src/index.ts) - TypeScript definitions
 
 ## Testing
