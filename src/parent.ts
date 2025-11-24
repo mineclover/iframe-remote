@@ -1,10 +1,4 @@
-import type {
-  Message,
-  RequestMessage,
-  ResponseMessage,
-  CommunicatorOptions,
-  PendingRequest,
-} from './types'
+import type { CommunicatorOptions, Message, PendingRequest, RequestMessage, ResponseMessage } from './types'
 import { generateId } from './utils'
 
 /**
@@ -18,10 +12,7 @@ export class ParentCommunicator {
   private pendingRequests: Map<string, PendingRequest>
   private messageHandler: ((event: MessageEvent) => void) | null = null
 
-  constructor(
-    targetWindow: Window,
-    options: CommunicatorOptions = {}
-  ) {
+  constructor(targetWindow: Window, options: CommunicatorOptions = {}) {
     this.targetWindow = targetWindow
     this.targetOrigin = options.targetOrigin || '*'
     this.options = {
@@ -109,24 +100,14 @@ export class ParentCommunicator {
       const result = await this.options.onRequest(request.payload)
       this.sendResponse(request.id, true, result)
     } catch (error) {
-      this.sendResponse(
-        request.id,
-        false,
-        undefined,
-        error instanceof Error ? error.message : 'Unknown error'
-      )
+      this.sendResponse(request.id, false, undefined, error instanceof Error ? error.message : 'Unknown error')
     }
   }
 
   /**
    * Send response to child's request
    */
-  private sendResponse(
-    id: string,
-    success: boolean,
-    payload?: any,
-    error?: string
-  ): void {
+  private sendResponse(id: string, success: boolean, payload?: unknown, error?: string): void {
     const response: ResponseMessage = {
       type: 'response',
       id,
@@ -142,7 +123,7 @@ export class ParentCommunicator {
   /**
    * Send a one-way message to child
    */
-  public send(payload: any): void {
+  public send(payload: unknown): void {
     const message: Message = {
       type: 'message',
       payload,
@@ -155,7 +136,7 @@ export class ParentCommunicator {
   /**
    * Send a request and wait for response
    */
-  public request<T = any>(payload: any, timeout?: number): Promise<T> {
+  public request<T = unknown>(payload: unknown, timeout?: number): Promise<T> {
     return new Promise((resolve, reject) => {
       const id = generateId()
       const timeoutMs = timeout || this.options.timeout || 5000
@@ -197,6 +178,7 @@ export class ParentCommunicator {
   /**
    * Log debug messages
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private log(...args: any[]): void {
     if (this.options.debug) {
       console.log('[ParentCommunicator]', ...args)

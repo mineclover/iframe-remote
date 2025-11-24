@@ -41,7 +41,7 @@ const NumberParamMetaSchema = ParamMetaBaseSchema.extend({
   },
   {
     message: 'min must be less than or equal to max',
-  }
+  },
 )
 
 // Select parameter schema
@@ -56,7 +56,7 @@ const SelectParamMetaSchema = ParamMetaBaseSchema.extend({
           z.object({
             label: z.string(),
             value: z.any(),
-          })
+          }),
         )
         .min(1, 'At least one option is required'),
     ])
@@ -160,7 +160,7 @@ export const FunctionMetaSchema = z.object({
  */
 export function validateParamMeta(param: unknown): {
   success: boolean
-  data?: any
+  data?: z.infer<typeof ParamMetaSchema>
   errors?: string[]
 } {
   try {
@@ -170,7 +170,7 @@ export function validateParamMeta(param: unknown): {
     }
     return {
       success: false,
-      errors: result.error?.errors?.map((e) => `${e.path.join('.')}: ${e.message}`) || ['Validation error'],
+      errors: result.error?.issues?.map((e: z.ZodIssue) => `${e.path.join('.')}: ${e.message}`) || ['Validation error'],
     }
   } catch (error) {
     return {
@@ -185,7 +185,7 @@ export function validateParamMeta(param: unknown): {
  */
 export function validateFunctionMeta(meta: unknown): {
   success: boolean
-  data?: any
+  data?: z.infer<typeof FunctionMetaSchema>
   errors?: string[]
 } {
   try {
@@ -195,7 +195,7 @@ export function validateFunctionMeta(meta: unknown): {
     }
     return {
       success: false,
-      errors: result.error?.errors?.map((e) => `${e.path.join('.')}: ${e.message}`) || ['Validation error'],
+      errors: result.error?.issues?.map((e: z.ZodIssue) => `${e.path.join('.')}: ${e.message}`) || ['Validation error'],
     }
   } catch (error) {
     return {
@@ -208,35 +208,27 @@ export function validateFunctionMeta(meta: unknown): {
 /**
  * Assert valid parameter metadata (throws on error)
  */
-export function assertValidParamMeta(param: unknown): asserts param is z.infer<
-  typeof ParamMetaSchema
-> {
+export function assertValidParamMeta(param: unknown): asserts param is z.infer<typeof ParamMetaSchema> {
   ParamMetaSchema.parse(param)
 }
 
 /**
  * Assert valid function metadata (throws on error)
  */
-export function assertValidFunctionMeta(
-  meta: unknown
-): asserts meta is z.infer<typeof FunctionMetaSchema> {
+export function assertValidFunctionMeta(meta: unknown): asserts meta is z.infer<typeof FunctionMetaSchema> {
   FunctionMetaSchema.parse(meta)
 }
 
 /**
  * Type guard for parameter metadata
  */
-export function isValidParamMeta(param: unknown): param is z.infer<
-  typeof ParamMetaSchema
-> {
+export function isValidParamMeta(param: unknown): param is z.infer<typeof ParamMetaSchema> {
   return ParamMetaSchema.safeParse(param).success
 }
 
 /**
  * Type guard for function metadata
  */
-export function isValidFunctionMeta(meta: unknown): meta is z.infer<
-  typeof FunctionMetaSchema
-> {
+export function isValidFunctionMeta(meta: unknown): meta is z.infer<typeof FunctionMetaSchema> {
   return FunctionMetaSchema.safeParse(meta).success
 }

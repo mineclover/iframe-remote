@@ -4,47 +4,44 @@
  */
 
 import type { CommunicatorOptions } from './types'
-import { generateId } from './utils'
-import {
-  RPCError,
-} from './types-rpc'
-
 import type {
   API,
-  MethodName,
-  MethodHandler,
-  RPCCallMessage,
-  RPCResponseMessage,
-  RPCHandlerMap,
-  RPCCallOptions,
-  RPCCaller,
-  RPCHandler,
   ExtractParameters,
   ExtractReturnType,
+  MethodHandler,
+  MethodName,
+  RPCCaller,
+  RPCCallMessage,
+  RPCCallOptions,
+  RPCHandler,
+  RPCHandlerMap,
+  RPCResponseMessage,
 } from './types-rpc'
+import { RPCError } from './types-rpc'
+import { generateId } from './utils'
 
 /**
  * Parent-side RPC communicator
  * Allows parent to call methods on child iframe
  */
-export class ParentRPC<
-  ChildAPI extends API = API,
-  ParentAPI extends API = API
-> implements RPCCaller<ChildAPI>, RPCHandler<ParentAPI> {
+export class ParentRPC<ChildAPI extends API = API, ParentAPI extends API = API>
+  implements RPCCaller<ChildAPI>, RPCHandler<ParentAPI>
+{
   private targetWindow: Window
   private targetOrigin: string
   private messageHandler: (event: MessageEvent) => void
   private handlers: Map<string, MethodHandler<ParentAPI, any>>
-  private pendingCalls: Map<string, {
-    resolve: (value: any) => void
-    reject: (reason: any) => void
-    timeout: ReturnType<typeof setTimeout>
-  }>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private pendingCalls: Map<
+    string,
+    {
+      resolve: (value: any) => void
+      reject: (reason: unknown) => void
+      timeout: ReturnType<typeof setTimeout>
+    }
+  >
 
-  constructor(
-    targetWindow: Window,
-    options: CommunicatorOptions = {}
-  ) {
+  constructor(targetWindow: Window, options: CommunicatorOptions = {}) {
     this.targetWindow = targetWindow
     this.targetOrigin = options.targetOrigin || '*'
     this.handlers = new Map()
@@ -113,7 +110,10 @@ export class ParentRPC<
       try {
         this.targetWindow.postMessage(message, this.targetOrigin)
       } catch (error) {
-        throw new RPCError(`Failed to send RPC call: ${error instanceof Error ? error.message : String(error)}`, 'SEND_ERROR')
+        throw new RPCError(
+          `Failed to send RPC call: ${error instanceof Error ? error.message : String(error)}`,
+          'SEND_ERROR',
+        )
       }
     })
   }
@@ -121,10 +121,7 @@ export class ParentRPC<
   /**
    * Register a method handler that child can call
    */
-  public register<M extends MethodName<ParentAPI>>(
-    method: M,
-    handler: MethodHandler<ParentAPI, M>
-  ): void {
+  public register<M extends MethodName<ParentAPI>>(method: M, handler: MethodHandler<ParentAPI, M>): void {
     this.handlers.set(method as string, handler)
   }
 
@@ -156,11 +153,13 @@ export class ParentRPC<
   /**
    * Handle incoming messages
    */
-  private handleMessage(data: any): void {
-    if (data.type === 'rpc-response') {
-      this.handleResponse(data as RPCResponseMessage)
-    } else if (data.type === 'rpc-call') {
-      this.handleCall(data as RPCCallMessage)
+  private handleMessage(data: unknown): void {
+    if (typeof data === 'object' && data !== null && 'type' in data) {
+      if (data.type === 'rpc-response') {
+        this.handleResponse(data as RPCResponseMessage)
+      } else if (data.type === 'rpc-call') {
+        this.handleCall(data as RPCCallMessage)
+      }
     }
   }
 
@@ -196,24 +195,14 @@ export class ParentRPC<
       const result = await handler(...call.args)
       this.sendResponse(call.id, true, result)
     } catch (error) {
-      this.sendResponse(
-        call.id,
-        false,
-        undefined,
-        error instanceof Error ? error.message : 'Unknown error'
-      )
+      this.sendResponse(call.id, false, undefined, error instanceof Error ? error.message : 'Unknown error')
     }
   }
 
   /**
    * Send RPC response
    */
-  private sendResponse(
-    id: string,
-    success: boolean,
-    result?: any,
-    error?: string
-  ): void {
+  private sendResponse(id: string, success: boolean, result?: unknown, error?: string): void {
     const response: RPCResponseMessage = {
       type: 'rpc-response',
       id,
@@ -248,19 +237,22 @@ export class ParentRPC<
  * Child-side RPC communicator
  * Allows child to call methods on parent window
  */
-export class ChildRPC<
-  ParentAPI extends API = API,
-  ChildAPI extends API = API
-> implements RPCCaller<ParentAPI>, RPCHandler<ChildAPI> {
+export class ChildRPC<ParentAPI extends API = API, ChildAPI extends API = API>
+  implements RPCCaller<ParentAPI>, RPCHandler<ChildAPI>
+{
   private parentWindow: Window
   private targetOrigin: string
   private messageHandler: (event: MessageEvent) => void
   private handlers: Map<string, MethodHandler<ChildAPI, any>>
-  private pendingCalls: Map<string, {
-    resolve: (value: any) => void
-    reject: (reason: any) => void
-    timeout: ReturnType<typeof setTimeout>
-  }>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private pendingCalls: Map<
+    string,
+    {
+      resolve: (value: any) => void
+      reject: (reason: unknown) => void
+      timeout: ReturnType<typeof setTimeout>
+    }
+  >
 
   constructor(options: CommunicatorOptions = {}) {
     if (!window.parent || window.parent === window) {
@@ -334,7 +326,10 @@ export class ChildRPC<
       try {
         this.parentWindow.postMessage(message, this.targetOrigin)
       } catch (error) {
-        throw new RPCError(`Failed to send RPC call: ${error instanceof Error ? error.message : String(error)}`, 'SEND_ERROR')
+        throw new RPCError(
+          `Failed to send RPC call: ${error instanceof Error ? error.message : String(error)}`,
+          'SEND_ERROR',
+        )
       }
     })
   }
@@ -342,10 +337,7 @@ export class ChildRPC<
   /**
    * Register a method handler that parent can call
    */
-  public register<M extends MethodName<ChildAPI>>(
-    method: M,
-    handler: MethodHandler<ChildAPI, M>
-  ): void {
+  public register<M extends MethodName<ChildAPI>>(method: M, handler: MethodHandler<ChildAPI, M>): void {
     this.handlers.set(method as string, handler)
   }
 
@@ -377,11 +369,13 @@ export class ChildRPC<
   /**
    * Handle incoming messages
    */
-  private handleMessage(data: any): void {
-    if (data.type === 'rpc-response') {
-      this.handleResponse(data as RPCResponseMessage)
-    } else if (data.type === 'rpc-call') {
-      this.handleCall(data as RPCCallMessage)
+  private handleMessage(data: unknown): void {
+    if (typeof data === 'object' && data !== null && 'type' in data) {
+      if (data.type === 'rpc-response') {
+        this.handleResponse(data as RPCResponseMessage)
+      } else if (data.type === 'rpc-call') {
+        this.handleCall(data as RPCCallMessage)
+      }
     }
   }
 
@@ -417,24 +411,14 @@ export class ChildRPC<
       const result = await handler(...call.args)
       this.sendResponse(call.id, true, result)
     } catch (error) {
-      this.sendResponse(
-        call.id,
-        false,
-        undefined,
-        error instanceof Error ? error.message : 'Unknown error'
-      )
+      this.sendResponse(call.id, false, undefined, error instanceof Error ? error.message : 'Unknown error')
     }
   }
 
   /**
    * Send RPC response
    */
-  private sendResponse(
-    id: string,
-    success: boolean,
-    result?: any,
-    error?: string
-  ): void {
+  private sendResponse(id: string, success: boolean, result?: unknown, error?: string): void {
     const response: RPCResponseMessage = {
       type: 'rpc-response',
       id,

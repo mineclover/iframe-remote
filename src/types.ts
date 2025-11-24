@@ -6,7 +6,7 @@ export type MessageType = 'message' | 'request' | 'response' | 'error'
 /**
  * Base message structure
  */
-export interface Message<T = any> {
+export interface Message<T = unknown> {
   id?: string
   type: MessageType
   payload: T
@@ -16,7 +16,7 @@ export interface Message<T = any> {
 /**
  * Request message with unique ID for response matching
  */
-export interface RequestMessage<T = any> extends Message<T> {
+export interface RequestMessage<T = unknown> extends Message<T> {
   type: 'request'
   id: string
   requestType?: string
@@ -25,7 +25,7 @@ export interface RequestMessage<T = any> extends Message<T> {
 /**
  * Response message matching request ID
  */
-export interface ResponseMessage<T = any> extends Message<T> {
+export interface ResponseMessage<T = unknown> extends Message<T> {
   type: 'response'
   id: string
   success: boolean
@@ -51,12 +51,12 @@ export interface CommunicatorOptions {
   /**
    * Callback for received messages
    */
-  onMessage?: (data: any) => void
+  onMessage?: (data: unknown) => void
 
   /**
    * Callback for handling requests (should return response)
    */
-  onRequest?: (data: any) => Promise<any> | any
+  onRequest?: (data: unknown) => Promise<unknown> | unknown
 
   /**
    * Error handler
@@ -73,8 +73,9 @@ export interface CommunicatorOptions {
 /**
  * Pending request tracking
  */
-export interface PendingRequest {
-  resolve: (value: any) => void
-  reject: (reason?: any) => void
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface PendingRequest<T = any> {
+  resolve: (value: T) => void
+  reject: (reason?: unknown) => void
   timeout: ReturnType<typeof setTimeout>
 }

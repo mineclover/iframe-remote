@@ -7,20 +7,19 @@
 /**
  * Extract function parameter types
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ExtractParameters<T> = T extends (...args: infer P) => any ? P : never
 
 /**
  * Extract function return type (unwrap Promise)
  */
-export type ExtractReturnType<T> = T extends (...args: any[]) => infer R
-  ? R extends Promise<infer U>
-    ? U
-    : R
-  : never
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ExtractReturnType<T> = T extends (...args: any[]) => infer R ? (R extends Promise<infer U> ? U : R) : never
 
 /**
  * API definition - maps method names to their function signatures
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type API = {
   [method: string]: (...args: any[]) => any | Promise<any>
 }
@@ -49,7 +48,7 @@ export interface RPCCallMessage<T extends API = API, M extends MethodName<T> = M
 /**
  * RPC response message
  */
-export interface RPCResponseMessage<T = any> {
+export interface RPCResponseMessage<T = unknown> {
   type: 'rpc-response'
   id: string
   success: boolean
@@ -59,23 +58,10 @@ export interface RPCResponseMessage<T = any> {
 }
 
 /**
- * RPC error codes
+ * Re-export RPC error types from shared package
  */
-export type RPCErrorCode = 'TIMEOUT' | 'ABORTED' | 'SEND_ERROR'
-
-/**
- * RPC error
- */
-export class RPCError extends Error {
-  constructor(
-    message: string,
-    public code?: RPCErrorCode,
-    public data?: any
-  ) {
-    super(message)
-    this.name = 'RPCError'
-  }
-}
+export type { RPCErrorCode } from '@packages/iframe-action-types'
+export { RPCError } from '@packages/iframe-action-types'
 
 /**
  * RPC handler map
@@ -96,10 +82,7 @@ export interface RPCCallOptions {
  * Type-safe RPC caller interface
  */
 export type RPCCaller<T extends API> = {
-  call<M extends MethodName<T>>(
-    method: M,
-    ...args: ExtractParameters<T[M]>
-  ): Promise<ExtractReturnType<T[M]>>
+  call<M extends MethodName<T>>(method: M, ...args: ExtractParameters<T[M]>): Promise<ExtractReturnType<T[M]>>
 
   callWithOptions<M extends MethodName<T>>(
     method: M,
@@ -112,10 +95,7 @@ export type RPCCaller<T extends API> = {
  * Type-safe RPC handler interface
  */
 export type RPCHandler<T extends API> = {
-  register<M extends MethodName<T>>(
-    method: M,
-    handler: MethodHandler<T, M>
-  ): void
+  register<M extends MethodName<T>>(method: M, handler: MethodHandler<T, M>): void
 
   registerAll(handlers: Partial<RPCHandlerMap<T>>): void
 
@@ -137,7 +117,7 @@ export interface ExampleParentAPI {
 export interface ExampleChildAPI {
   // Child methods that parent can call
   initialize: (options: { width: number; height: number }) => Promise<void>
-  getData: () => Promise<{ status: string; items: any[] }>
-  render: (data: { content: string; style?: any }) => void
+  getData: () => Promise<{ status: string; items: unknown[] }>
+  render: (data: { content: string; style?: Record<string, unknown> }) => void
   destroy: () => Promise<void>
 }
