@@ -268,7 +268,7 @@ describe('ParentCommunicator', () => {
 
       const error = await requestPromise
       expect(error).toBeInstanceOf(Error)
-      expect(error.message).toBe('Communicator destroyed')
+      expect((error as Error).message).toBe('Communicator destroyed')
     })
   })
 })

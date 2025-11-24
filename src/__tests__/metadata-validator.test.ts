@@ -66,7 +66,8 @@ describe('metadata-validator', () => {
       })
 
       expect(result.success).toBe(true)
-      expect(result.data.options).toEqual(['light', 'dark', 'auto'])
+      expect(result.data).toBeDefined()
+      expect((result.data as any).options).toEqual(['light', 'dark', 'auto'])
     })
 
     it('should validate select parameter with label-value pairs', () => {
@@ -80,7 +81,8 @@ describe('metadata-validator', () => {
       })
 
       expect(result.success).toBe(true)
-      expect(result.data.options).toHaveLength(2)
+      expect(result.data).toBeDefined()
+      expect((result.data as any).options).toHaveLength(2)
     })
 
     it('should fail when select has empty options', () => {
@@ -103,7 +105,8 @@ describe('metadata-validator', () => {
       })
 
       expect(result.success).toBe(true)
-      expect(result.data.type).toBe('boolean')
+      expect(result.data).toBeDefined()
+      expect(result.data!.type).toBe('boolean')
     })
 
     it('should validate color parameter with valid hex', () => {
@@ -114,7 +117,8 @@ describe('metadata-validator', () => {
       })
 
       expect(result.success).toBe(true)
-      expect(result.data.default).toBe('#667eea')
+      expect(result.data).toBeDefined()
+      expect(result.data!.default).toBe('#667eea')
     })
 
     it('should fail when color has invalid format', () => {
@@ -168,7 +172,8 @@ describe('metadata-validator', () => {
       })
 
       expect(result.success).toBe(true)
-      expect(result.data.min).toBe('2024-01-01')
+      expect(result.data).toBeDefined()
+      expect((result.data as any).min).toBe('2024-01-01')
     })
 
     it('should fail when date has invalid format', () => {
@@ -192,7 +197,8 @@ describe('metadata-validator', () => {
       })
 
       expect(result.success).toBe(true)
-      expect(result.data.min).toBe('09:00')
+      expect(result.data).toBeDefined()
+      expect((result.data as any).min).toBe('09:00')
     })
 
     it('should fail when time has invalid format', () => {
@@ -215,7 +221,8 @@ describe('metadata-validator', () => {
       })
 
       expect(result.success).toBe(true)
-      expect(result.data.itemType).toBe('string')
+      expect(result.data).toBeDefined()
+      expect((result.data as any).itemType).toBe('string')
     })
 
     it('should validate parameter without type', () => {
@@ -225,7 +232,8 @@ describe('metadata-validator', () => {
       })
 
       expect(result.success).toBe(true)
-      expect(result.data.name).toBe('value')
+      expect(result.data).toBeDefined()
+      expect(result.data!.name).toBe('value')
     })
 
     it('should fail when name is missing', () => {
@@ -253,7 +261,8 @@ describe('metadata-validator', () => {
       })
 
       expect(result.success).toBe(true)
-      expect(result.data.params).toHaveLength(2)
+      expect(result.data).toBeDefined()
+      expect(result.data!.params).toHaveLength(2)
     })
 
     it('should validate function metadata without params', () => {
@@ -262,7 +271,8 @@ describe('metadata-validator', () => {
       })
 
       expect(result.success).toBe(true)
-      expect(result.data.description).toBe('Simple function')
+      expect(result.data).toBeDefined()
+      expect(result.data!.description).toBe('Simple function')
     })
 
     it('should validate function metadata with examples and tags', () => {
@@ -274,8 +284,9 @@ describe('metadata-validator', () => {
       })
 
       expect(result.success).toBe(true)
-      expect(result.data.examples).toHaveLength(2)
-      expect(result.data.tags).toContain('api')
+      expect(result.data).toBeDefined()
+      expect(result.data!.examples).toHaveLength(2)
+      expect(result.data!.tags).toContain('api')
     })
 
     it('should validate deprecated function', () => {
@@ -286,8 +297,9 @@ describe('metadata-validator', () => {
       })
 
       expect(result.success).toBe(true)
-      expect(result.data.deprecated).toBe(true)
-      expect(result.data.deprecationMessage).toBe('Use newFunction instead')
+      expect(result.data).toBeDefined()
+      expect(result.data!.deprecated).toBe(true)
+      expect(result.data!.deprecationMessage).toBe('Use newFunction instead')
     })
 
     it('should fail when params are invalid', () => {
@@ -414,7 +426,8 @@ describe('metadata-validator', () => {
       })
 
       expect(result.success).toBe(true)
-      expect(result.data.options).toEqual([1, 2, 3, 4, 5])
+      expect(result.data).toBeDefined()
+      expect((result.data as any).options).toEqual([1, 2, 3, 4, 5])
     })
 
     it('should handle optional fields', () => {
@@ -427,7 +440,8 @@ describe('metadata-validator', () => {
       })
 
       expect(result.success).toBe(true)
-      expect(result.data.required).toBe(false)
+      expect(result.data).toBeDefined()
+      expect(result.data!.required).toBe(false)
     })
 
     it('should validate empty function metadata', () => {
