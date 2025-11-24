@@ -2,7 +2,9 @@
 
 ## 📦 Package Overview
 
-3개의 주요 통신 시스템을 제공하는 양방향 iframe 통신 라이브러리
+2개의 주요 통신 시스템을 제공하는 양방향 iframe 통신 라이브러리
+
+> **Note:** DevTools는 [@packages/web-components](../web-components/)로 마이그레이션되었습니다
 
 ---
 
@@ -63,40 +65,6 @@ const result = await parentRPC.call('add', 10, 20); // 30
 
 ---
 
-### 3. **DevTools** (메타데이터 기반 개발자 도구)
-```typescript
-import { ParentDevTools, ChildDevTools } from '@packages/iframe-remote'
-```
-
-**목적:** 런타임에 메타데이터를 기반으로 동적 UI 생성
-
-**사용 예시:**
-```typescript
-// Child: 함수 + 메타데이터 등록
-const childDevTools = new ChildDevTools({
-  animate: withMeta(
-    (duration: number, easing: string) => { /* animate */ },
-    {
-      params: [
-        { name: 'duration', type: 'number', min: 0, max: 5000, default: 1000 },
-        { name: 'easing', type: 'select', options: ['linear', 'ease-in', 'ease-out'] }
-      ]
-    }
-  )
-});
-
-// Parent: 메타데이터로 UI 자동 생성
-const functions = await parentDevTools.getFunctions();
-// 각 파라미터 타입에 맞는 input 컨트롤 렌더링
-```
-
-**특징:**
-- Zod 기반 메타데이터 검증
-- 타입 안전성 + 런타임 UI 생성
-- 10가지 파라미터 타입 지원 (number, string, boolean, select, color, etc.)
-
----
-
 ## 📚 Export Structure
 
 ### Main Entry (`./dist/index.js`)
@@ -104,15 +72,12 @@ const functions = await parentDevTools.getFunctions();
 // Classes
 export { ParentCommunicator, ChildCommunicator }  // Basic
 export { ParentRPC, ChildRPC }                    // RPC
-export { ParentDevTools, ChildDevTools }          // DevTools
 
 // Types
 export type { Message, CommunicatorOptions, ... } // Basic types
 export type { API, RPCCallMessage, ... }          // RPC types
-export type { ParamMeta, FunctionMeta, ... }      // DevTools types
 
 // Utilities
-export { createFunctionMeta, withMeta }           // DevTools helpers
 export { validateParamMeta, ... }                 // Zod validators
 export { RPCError }                               // RPC error class
 ```
@@ -142,39 +107,9 @@ import { ParentRPC, ChildRPC } from '@packages/iframe-remote'
   const { ParentCommunicator } = window.IframeRemote;
 </script>
 ```
-- `iframe-remote.bundle.js` (~25KB) - 개발용
-- `iframe-remote.bundle.min.js` (~12KB) - 프로덕션용
+- `iframe-remote.bundle.js` (~20KB) - 개발용
+- `iframe-remote.bundle.min.js` (~10KB) - 프로덕션용
 - 번들러 없이 바로 사용 가능
-
----
-
-## 🧩 Bonus: Web Component
-
-**위치:** `examples/iframe-preview-component.js` (별도 파일)
-
-```html
-<iframe-preview
-  id="preview-1"
-  url="./child.html"
-  width="800"
-  height="600">
-</iframe-preview>
-
-<script type="module">
-  import './iframe-preview-component.js';
-
-  const preview = document.getElementById('preview-1');
-  const iframe = preview.getIframe();
-  const contentWindow = preview.getContentWindow();
-  preview.setMode('click'); // or 'move'
-</script>
-```
-
-**특징:**
-- Borderless Segmented Toolbar 디자인
-- Zoom, Pan, Resize 기능
-- 마우스 + 터치 드래그 지원
-- Shadow DOM 미사용 (iframe 접근 용이)
 
 ---
 
@@ -192,31 +127,14 @@ src/
 ├── rpc.ts                    # ParentRPC, ChildRPC
 ├── types-rpc.ts              # RPC types
 │
-├── devtools.ts               # ParentDevTools, ChildDevTools
-├── types-devtools.ts         # DevTools types & helpers
 ├── metadata-validator.ts     # Zod schemas
 │
 └── __tests__/                # Unit tests
 
 examples/
-├── iframe-preview-component.js  # Web Component
-├── web-component-demo.html      # Component demo
-├── iframe-previewer.html        # Multi-preview demo
-├── standalone-*.html            # Basic demos
-├── rpc-*.html                   # RPC demos
-└── devtools-*.html              # DevTools demos
+├── standalone-*.html         # Basic demos
+└── rpc-*.html                # RPC demos
 ```
-
----
-
-## 🎨 Design Pattern: Borderless Segmented Toolbar
-
-웹 컴포넌트와 예제에서 사용하는 디자인 컨셉:
-- **Zero padding** - 모든 요소의 padding을 0으로
-- **Border separators** - `border-right: 1px solid` 로 구분
-- **Flexbox stretch** - `align-items: stretch` 로 높이 통일
-- **Fixed heights** - 일관된 높이 (header: 32px, controls: 28px)
-- **VS Code 스타일** - 어두운 테마, flat 디자인
 
 ---
 
@@ -256,25 +174,7 @@ const rpc = new ParentRPC<{ add: (a: number, b: number) => number }>(
 const result = await rpc.call('add', 10, 20);
 ```
 
-### 3. DevTools
-```typescript
-// Child
-import { ChildDevTools, withMeta } from '@packages/iframe-remote';
-const devtools = new ChildDevTools({
-  setColor: withMeta(
-    (color: string) => document.body.style.background = color,
-    { params: [{ name: 'color', type: 'color', default: '#ffffff' }] }
-  )
-});
-
-// Parent
-import { ParentDevTools } from '@packages/iframe-remote';
-const devtools = new ParentDevTools(iframe.contentWindow);
-const functions = await devtools.getFunctions();
-// UI 생성 로직...
-```
-
-### 4. IIFE Bundle
+### 3. IIFE Bundle
 ```html
 <!-- Child -->
 <script src="./dist/iframe-remote.bundle.js"></script>
@@ -297,14 +197,12 @@ const functions = await devtools.getFunctions();
 
 ## 📊 Comparison Matrix
 
-| Feature | Basic | RPC | DevTools |
-|---------|-------|-----|----------|
-| 타입 안전성 | ⚠️ Partial | ✅ Full | ✅ Full |
-| 사용 복잡도 | ⭐ Simple | ⭐⭐ Medium | ⭐⭐⭐ Advanced |
-| 런타임 UI | ❌ | ❌ | ✅ |
-| 코드 크기 | 🔹 Small | 🔹 Small | 🔸 Medium |
-| 메타데이터 | ❌ | ❌ | ✅ Zod schema |
-| Use Case | 간단한 통신 | API 호출 | 개발자 도구 |
+| Feature | Basic | RPC |
+|---------|-------|-----|
+| 타입 안전성 | ⚠️ Partial | ✅ Full |
+| 사용 복잡도 | ⭐ Simple | ⭐⭐ Medium |
+| 코드 크기 | 🔹 Small | 🔹 Small |
+| Use Case | 간단한 통신 | API 호출 |
 
 ---
 
@@ -328,14 +226,10 @@ npm run test:watch
 
 ## 📝 Summary
 
-**3개의 시스템:**
+**2개의 시스템:**
 1. **Basic** - 기본 메시지 통신
 2. **RPC** - 타입 안전 함수 호출
-3. **DevTools** - 메타데이터 기반 동적 UI
 
 **2개의 배포 형태:**
 1. **ESM** - npm 패키지 (TypeScript 지원)
 2. **IIFE** - 스크립트 태그용 번들
-
-**보너스:**
-- **Web Component** - iframe 프리뷰 컴포넌트 (예제용)
