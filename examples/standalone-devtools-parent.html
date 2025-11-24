@@ -365,7 +365,7 @@
       logSection.scrollTop = logSection.scrollHeight
     }
 
-    window.clearLog = function() {
+    window.clearLog = () => {
       logSection.innerHTML = ''
     }
 
@@ -471,7 +471,7 @@
         }
 
         let input
-        let inputType = inferredType
+        const inputType = inferredType
 
         if (param.type === 'select' && param.options) {
           // 명시적 select 타입
@@ -606,7 +606,7 @@
             } else if (type === 'array') {
               try {
                 value = JSON.parse(input.value)
-              } catch (e) {
+              } catch (_e) {
                 value = []
               }
             } else if (type === 'select' || type === 'color' || type === 'text') {
@@ -642,7 +642,7 @@
       }
     }
 
-    window.quickCall = async function(fnName, args) {
+    window.quickCall = async (fnName, args) => {
       try {
         addLog(`📞 Quick call: ${fnName}(${JSON.stringify(args)})`, 'info')
         const result = await devtools.callFunction(fnName, ...args)

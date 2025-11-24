@@ -2,7 +2,7 @@
  * E2E tests for RPC protocol
  */
 
-import { test, expect } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 
 test.describe('RPC Protocol', () => {
   test.beforeEach(async ({ page }) => {
@@ -134,9 +134,7 @@ test.describe('RPC Protocol', () => {
     expect(result).toBeTruthy()
   })
 
-  test('should handle RPC call with complex return values', async ({
-    page,
-  }) => {
+  test('should handle RPC call with complex return values', async ({ page }) => {
     await page.waitForSelector('.function-item')
 
     // Call getPageData which returns object with multiple fields

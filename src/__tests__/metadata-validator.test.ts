@@ -2,14 +2,14 @@
  * Tests for metadata validator
  */
 
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
-  validateParamMeta,
-  validateFunctionMeta,
-  assertValidParamMeta,
   assertValidFunctionMeta,
-  isValidParamMeta,
+  assertValidParamMeta,
   isValidFunctionMeta,
+  isValidParamMeta,
+  validateFunctionMeta,
+  validateParamMeta,
 } from '../metadata-validator'
 
 describe('metadata-validator', () => {
@@ -350,7 +350,7 @@ describe('metadata-validator', () => {
         isValidParamMeta({
           name: 'test',
           type: 'boolean',
-        })
+        }),
       ).toBe(true)
     })
 
@@ -359,7 +359,7 @@ describe('metadata-validator', () => {
         isValidParamMeta({
           type: 'color',
           default: 'invalid',
-        })
+        }),
       ).toBe(false)
     })
   })
@@ -370,7 +370,7 @@ describe('metadata-validator', () => {
         isValidFunctionMeta({
           description: 'Test',
           params: [{ name: 'value', type: 'number' }],
-        })
+        }),
       ).toBe(true)
     })
 
@@ -380,7 +380,7 @@ describe('metadata-validator', () => {
           params: [
             { name: 'color', type: 'color', default: '#fff' }, // Invalid hex
           ],
-        })
+        }),
       ).toBe(false)
     })
   })

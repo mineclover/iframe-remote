@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ChildCommunicator } from '../child'
 
 describe('ChildCommunicator', () => {
@@ -59,9 +59,7 @@ describe('ChildCommunicator', () => {
         value: window,
       })
 
-      expect(() => new ChildCommunicator()).toThrow(
-        'ChildCommunicator must be used inside an iframe'
-      )
+      expect(() => new ChildCommunicator()).toThrow('ChildCommunicator must be used inside an iframe')
     })
 
     it('should set up message listener', () => {
@@ -100,7 +98,7 @@ describe('ChildCommunicator', () => {
           payload,
           timestamp: expect.any(Number),
         }),
-        '*'
+        '*',
       )
     })
 
@@ -111,10 +109,7 @@ describe('ChildCommunicator', () => {
 
       communicator.send({ test: 'data' })
 
-      expect(mockParentWindow.postMessage).toHaveBeenCalledWith(
-        expect.any(Object),
-        'https://example.com'
-      )
+      expect(mockParentWindow.postMessage).toHaveBeenCalledWith(expect.any(Object), 'https://example.com')
     })
   })
 
@@ -132,7 +127,7 @@ describe('ChildCommunicator', () => {
           payload,
           timestamp: expect.any(Number),
         }),
-        '*'
+        '*',
       )
     })
 
@@ -148,16 +143,18 @@ describe('ChildCommunicator', () => {
       const requestId = requestMessage.id
 
       if (messageListener) {
-        messageListener(new MessageEvent('message', {
-          data: {
-            type: 'response',
-            id: requestId,
-            success: true,
-            payload: responseData,
-          },
-          source: mockParentWindow,
-          origin: window.location.origin,
-        }))
+        messageListener(
+          new MessageEvent('message', {
+            data: {
+              type: 'response',
+              id: requestId,
+              success: true,
+              payload: responseData,
+            },
+            source: mockParentWindow,
+            origin: window.location.origin,
+          }),
+        )
       }
 
       const result = await requestPromise
@@ -185,14 +182,16 @@ describe('ChildCommunicator', () => {
       communicator = new ChildCommunicator({ onMessage })
 
       if (messageListener) {
-        messageListener(new MessageEvent('message', {
-          data: {
-            type: 'message',
-            payload: { command: 'update' },
-          },
-          source: mockParentWindow,
-          origin: window.location.origin,
-        }))
+        messageListener(
+          new MessageEvent('message', {
+            data: {
+              type: 'message',
+              payload: { command: 'update' },
+            },
+            source: mockParentWindow,
+            origin: window.location.origin,
+          }),
+        )
       }
 
       expect(onMessage).toHaveBeenCalledWith({ command: 'update' })
@@ -206,11 +205,13 @@ describe('ChildCommunicator', () => {
       })
 
       if (messageListener) {
-        messageListener(new MessageEvent('message', {
-          data: { type: 'message', payload: {} },
-          source: mockParentWindow,
-          origin: 'https://malicious.com',
-        }))
+        messageListener(
+          new MessageEvent('message', {
+            data: { type: 'message', payload: {} },
+            source: mockParentWindow,
+            origin: 'https://malicious.com',
+          }),
+        )
       }
 
       expect(onMessage).not.toHaveBeenCalled()
@@ -221,18 +222,20 @@ describe('ChildCommunicator', () => {
       communicator = new ChildCommunicator({ onRequest })
 
       if (messageListener) {
-        messageListener(new MessageEvent('message', {
-          data: {
-            type: 'request',
-            id: 'test-req-id',
-            payload: { type: 'getData' },
-          },
-          source: mockParentWindow,
-          origin: window.location.origin,
-        }))
+        messageListener(
+          new MessageEvent('message', {
+            data: {
+              type: 'request',
+              id: 'test-req-id',
+              payload: { type: 'getData' },
+            },
+            source: mockParentWindow,
+            origin: window.location.origin,
+          }),
+        )
       }
 
-      await new Promise(resolve => setTimeout(resolve, 0))
+      await new Promise((resolve) => setTimeout(resolve, 0))
 
       expect(onRequest).toHaveBeenCalledWith({ type: 'getData' })
       expect(mockParentWindow.postMessage).toHaveBeenCalledWith(
@@ -242,7 +245,7 @@ describe('ChildCommunicator', () => {
           success: true,
           payload: { status: 'ok', data: { foo: 'bar' } },
         }),
-        '*'
+        '*',
       )
     })
 
@@ -251,18 +254,20 @@ describe('ChildCommunicator', () => {
       communicator = new ChildCommunicator({ onRequest })
 
       if (messageListener) {
-        messageListener(new MessageEvent('message', {
-          data: {
-            type: 'request',
-            id: 'error-req-id',
-            payload: { type: 'getData' },
-          },
-          source: mockParentWindow,
-          origin: window.location.origin,
-        }))
+        messageListener(
+          new MessageEvent('message', {
+            data: {
+              type: 'request',
+              id: 'error-req-id',
+              payload: { type: 'getData' },
+            },
+            source: mockParentWindow,
+            origin: window.location.origin,
+          }),
+        )
       }
 
-      await new Promise(resolve => setTimeout(resolve, 0))
+      await new Promise((resolve) => setTimeout(resolve, 0))
 
       expect(mockParentWindow.postMessage).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -271,7 +276,7 @@ describe('ChildCommunicator', () => {
           success: false,
           error: 'Handler failed',
         }),
-        '*'
+        '*',
       )
     })
   })
@@ -281,15 +286,12 @@ describe('ChildCommunicator', () => {
       communicator = new ChildCommunicator()
       communicator.destroy()
 
-      expect(window.removeEventListener).toHaveBeenCalledWith(
-        'message',
-        expect.any(Function)
-      )
+      expect(window.removeEventListener).toHaveBeenCalledWith('message', expect.any(Function))
     })
 
     it('should reject pending requests', async () => {
       communicator = new ChildCommunicator({ timeout: 10000 })
-      const requestPromise = communicator.request({ type: 'getConfig' }).catch(e => e)
+      const requestPromise = communicator.request({ type: 'getConfig' }).catch((e) => e)
 
       communicator.destroy()
       communicator = null as any // Prevent double destroy in afterEach

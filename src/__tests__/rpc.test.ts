@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { ParentRPC, ChildRPC } from '../rpc'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { ChildRPC, ParentRPC } from '../rpc'
 import { RPCError } from '../types-rpc'
 
 describe('ParentRPC', () => {
@@ -41,7 +41,7 @@ describe('ParentRPC', () => {
           args: ['arg1', 123],
           id: expect.any(String),
         }),
-        '*'
+        '*',
       )
     })
 
@@ -55,16 +55,18 @@ describe('ParentRPC', () => {
       const callMessage = call[0] as any
 
       if (messageListener) {
-        messageListener(new MessageEvent('message', {
-          data: {
-            type: 'rpc-response',
-            id: callMessage.id,
-            success: true,
-            result: resultData,
-          },
-          source: mockWindow,
-          origin: window.location.origin,
-        }))
+        messageListener(
+          new MessageEvent('message', {
+            data: {
+              type: 'rpc-response',
+              id: callMessage.id,
+              success: true,
+              result: resultData,
+            },
+            source: mockWindow,
+            origin: window.location.origin,
+          }),
+        )
       }
 
       const result = await callPromise
@@ -80,16 +82,18 @@ describe('ParentRPC', () => {
       const callMessage = call[0] as any
 
       if (messageListener) {
-        messageListener(new MessageEvent('message', {
-          data: {
-            type: 'rpc-response',
-            id: callMessage.id,
-            success: false,
-            error: 'Method failed',
-          },
-          source: mockWindow,
-          origin: window.location.origin,
-        }))
+        messageListener(
+          new MessageEvent('message', {
+            data: {
+              type: 'rpc-response',
+              id: callMessage.id,
+              success: false,
+              error: 'Method failed',
+            },
+            source: mockWindow,
+            origin: window.location.origin,
+          }),
+        )
       }
 
       await expect(callPromise).rejects.toThrow('Method failed')
@@ -116,19 +120,21 @@ describe('ParentRPC', () => {
       rpc.register('testMethod', handler)
 
       if (messageListener) {
-        messageListener(new MessageEvent('message', {
-          data: {
-            type: 'rpc-call',
-            id: 'test-call-id',
-            method: 'testMethod',
-            args: ['arg1', 'arg2'],
-          },
-          source: mockWindow,
-          origin: window.location.origin,
-        }))
+        messageListener(
+          new MessageEvent('message', {
+            data: {
+              type: 'rpc-call',
+              id: 'test-call-id',
+              method: 'testMethod',
+              args: ['arg1', 'arg2'],
+            },
+            source: mockWindow,
+            origin: window.location.origin,
+          }),
+        )
       }
 
-      await new Promise(resolve => setTimeout(resolve, 0))
+      await new Promise((resolve) => setTimeout(resolve, 0))
 
       expect(handler).toHaveBeenCalledWith('arg1', 'arg2')
       expect(mockWindow.postMessage).toHaveBeenCalledWith(
@@ -138,7 +144,7 @@ describe('ParentRPC', () => {
           success: true,
           result: { result: 'success' },
         }),
-        '*'
+        '*',
       )
     })
 
@@ -146,19 +152,21 @@ describe('ParentRPC', () => {
       rpc = new ParentRPC(mockWindow)
 
       if (messageListener) {
-        messageListener(new MessageEvent('message', {
-          data: {
-            type: 'rpc-call',
-            id: 'unknown-method-id',
-            method: 'unknownMethod',
-            args: [],
-          },
-          source: mockWindow,
-          origin: window.location.origin,
-        }))
+        messageListener(
+          new MessageEvent('message', {
+            data: {
+              type: 'rpc-call',
+              id: 'unknown-method-id',
+              method: 'unknownMethod',
+              args: [],
+            },
+            source: mockWindow,
+            origin: window.location.origin,
+          }),
+        )
       }
 
-      await new Promise(resolve => setTimeout(resolve, 0))
+      await new Promise((resolve) => setTimeout(resolve, 0))
 
       expect(mockWindow.postMessage).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -167,7 +175,7 @@ describe('ParentRPC', () => {
           success: false,
           error: expect.stringContaining('Method not found'),
         }),
-        '*'
+        '*',
       )
     })
 
@@ -178,19 +186,21 @@ describe('ParentRPC', () => {
       rpc.register('errorMethod', handler)
 
       if (messageListener) {
-        messageListener(new MessageEvent('message', {
-          data: {
-            type: 'rpc-call',
-            id: 'error-call-id',
-            method: 'errorMethod',
-            args: [],
-          },
-          source: mockWindow,
-          origin: window.location.origin,
-        }))
+        messageListener(
+          new MessageEvent('message', {
+            data: {
+              type: 'rpc-call',
+              id: 'error-call-id',
+              method: 'errorMethod',
+              args: [],
+            },
+            source: mockWindow,
+            origin: window.location.origin,
+          }),
+        )
       }
 
-      await new Promise(resolve => setTimeout(resolve, 0))
+      await new Promise((resolve) => setTimeout(resolve, 0))
 
       expect(mockWindow.postMessage).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -199,7 +209,7 @@ describe('ParentRPC', () => {
           success: false,
           error: 'Handler error',
         }),
-        '*'
+        '*',
       )
     })
   })
@@ -217,19 +227,21 @@ describe('ParentRPC', () => {
       })
 
       if (messageListener) {
-        messageListener(new MessageEvent('message', {
-          data: {
-            type: 'rpc-call',
-            id: 'call1',
-            method: 'method1',
-            args: [],
-          },
-          source: mockWindow,
-          origin: window.location.origin,
-        }))
+        messageListener(
+          new MessageEvent('message', {
+            data: {
+              type: 'rpc-call',
+              id: 'call1',
+              method: 'method1',
+              args: [],
+            },
+            source: mockWindow,
+            origin: window.location.origin,
+          }),
+        )
       }
 
-      await new Promise(resolve => setTimeout(resolve, 0))
+      await new Promise((resolve) => setTimeout(resolve, 0))
 
       expect(handler1).toHaveBeenCalled()
     })
@@ -244,19 +256,21 @@ describe('ParentRPC', () => {
       rpc.unregister('testMethod')
 
       if (messageListener) {
-        messageListener(new MessageEvent('message', {
-          data: {
-            type: 'rpc-call',
-            id: 'test-id',
-            method: 'testMethod',
-            args: [],
-          },
-          source: mockWindow,
-          origin: window.location.origin,
-        }))
+        messageListener(
+          new MessageEvent('message', {
+            data: {
+              type: 'rpc-call',
+              id: 'test-id',
+              method: 'testMethod',
+              args: [],
+            },
+            source: mockWindow,
+            origin: window.location.origin,
+          }),
+        )
       }
 
-      await new Promise(resolve => setTimeout(resolve, 0))
+      await new Promise((resolve) => setTimeout(resolve, 0))
 
       expect(handler).not.toHaveBeenCalled()
     })
@@ -268,16 +282,13 @@ describe('ParentRPC', () => {
 
       rpc.destroy()
 
-      expect(window.removeEventListener).toHaveBeenCalledWith(
-        'message',
-        expect.any(Function)
-      )
+      expect(window.removeEventListener).toHaveBeenCalledWith('message', expect.any(Function))
     })
 
     it('should reject pending calls', async () => {
       rpc = new ParentRPC(mockWindow, { timeout: 10000 })
 
-      const callPromise = rpc.call('method').catch(e => e)
+      const callPromise = rpc.call('method').catch((e) => e)
 
       rpc.destroy()
       rpc = null as any
@@ -350,7 +361,7 @@ describe('ChildRPC', () => {
         method: 'parentMethod',
         args: ['arg1', 123],
       }),
-      '*'
+      '*',
     )
   })
 
@@ -361,19 +372,21 @@ describe('ChildRPC', () => {
     rpc.register('childMethod', handler)
 
     if (messageListener) {
-      messageListener(new MessageEvent('message', {
-        data: {
-          type: 'rpc-call',
-          id: 'parent-call-id',
-          method: 'childMethod',
-          args: ['test'],
-        },
-        source: mockParentWindow,
-        origin: window.location.origin,
-      }))
+      messageListener(
+        new MessageEvent('message', {
+          data: {
+            type: 'rpc-call',
+            id: 'parent-call-id',
+            method: 'childMethod',
+            args: ['test'],
+          },
+          source: mockParentWindow,
+          origin: window.location.origin,
+        }),
+      )
     }
 
-    await new Promise(resolve => setTimeout(resolve, 0))
+    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(handler).toHaveBeenCalledWith('test')
     expect(mockParentWindow.postMessage).toHaveBeenCalledWith(
@@ -383,7 +396,7 @@ describe('ChildRPC', () => {
         success: true,
         result: { data: 'test' },
       }),
-      '*'
+      '*',
     )
   })
 })

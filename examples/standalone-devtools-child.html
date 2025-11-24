@@ -297,7 +297,7 @@
               if (typeof value === 'function' && this.matchesPattern(key)) {
                 functions.set(key, value)
               }
-            } catch (e) {
+            } catch (_e) {
               // Skip
             }
           }
@@ -311,7 +311,7 @@
                 if (typeof value === 'function' && this.matchesPattern(key)) {
                   functions.set(key, value)
                 }
-              } catch (e) {
+              } catch (_e) {
                 // Skip
               }
             }
@@ -350,7 +350,7 @@
           })
 
           return { params, count: fn.length }
-        } catch (error) {
+        } catch (_error) {
           return { params: [], count: fn.length }
         }
       }
@@ -433,31 +433,27 @@
     }
 
     // Define window functions with metadata
-    window.__getUserInfo = function() {
-      return {
+    window.__getUserInfo = () => ({
         name: 'Test User',
         role: 'admin',
         timestamp: Date.now()
-      }
-    }
+      })
     window.__getUserInfo.__meta = {
       description: '사용자 정보를 반환합니다',
       params: []
     }
 
-    window.__getPageData = function() {
-      return {
+    window.__getPageData = () => ({
         title: document.title,
         url: window.location.href,
-        userAgent: navigator.userAgent.slice(0, 50) + '...'
-      }
-    }
+        userAgent: `${navigator.userAgent.slice(0, 50)}...`
+      })
     window.__getPageData.__meta = {
       description: '현재 페이지 데이터를 반환합니다',
       params: []
     }
 
-    window.__performAction = function(action, value) {
+    window.__performAction = (action, value) => {
       console.log(`Performing action: ${action} with value:`, value)
       return {
         success: true,
@@ -474,7 +470,7 @@
       ]
     }
 
-    window.__asyncOperation = async function(delay = 1000) {
+    window.__asyncOperation = async (delay = 1000) => {
       console.log(`Starting async operation (${delay}ms)...`)
       await new Promise(resolve => setTimeout(resolve, delay))
       console.log('Async operation completed!')
@@ -491,9 +487,7 @@
       ]
     }
 
-    window.__add = function(a, b) {
-      return a + b
-    }
+    window.__add = (a, b) => a + b
     window.__add.__meta = {
       description: '두 숫자를 더합니다',
       params: [
@@ -502,9 +496,7 @@
       ]
     }
 
-    window.__getRandomNumber = function(min = 0, max = 100) {
-      return Math.floor(Math.random() * (max - min + 1)) + min
-    }
+    window.__getRandomNumber = (min = 0, max = 100) => Math.floor(Math.random() * (max - min + 1)) + min
     window.__getRandomNumber.__meta = {
       description: '범위 내 랜덤 숫자를 생성합니다',
       params: [
@@ -513,7 +505,7 @@
       ]
     }
 
-    window.__setColor = function(color) {
+    window.__setColor = (color) => {
       document.body.style.background = color
       return { success: true, color }
     }
@@ -524,7 +516,7 @@
       ]
     }
 
-    window.__toggleFeature = function(enabled) {
+    window.__toggleFeature = (enabled) => {
       console.log(`Feature ${enabled ? 'enabled' : 'disabled'}`)
       return { feature: 'test', enabled }
     }
@@ -535,7 +527,7 @@
       ]
     }
 
-    window.__selectOption = function(option) {
+    window.__selectOption = (option) => {
       console.log(`Selected: ${option}`)
       return { selected: option }
     }
@@ -549,7 +541,7 @@
     // 🆕 Functions WITHOUT metadata - demonstrating auto-inference
     // These functions don't have __meta, so UI is auto-generated from parameter names
 
-    window.__updateConfig = function(isEnabled, maxRetries, backgroundColor) {
+    window.__updateConfig = (isEnabled, maxRetries, backgroundColor) => {
       console.log('Config updated:', { isEnabled, maxRetries, backgroundColor })
       return {
         success: true,
@@ -562,8 +554,7 @@
       }
     }
 
-    window.__processData = function(itemsList, minCount, shouldValidate) {
-      return {
+    window.__processData = (itemsList, minCount, shouldValidate) => ({
         items: itemsList,
         count: minCount,
         validated: shouldValidate,
@@ -572,11 +563,9 @@
           minCount: 'number (from "min" prefix)',
           shouldValidate: 'boolean (from "should" prefix)'
         }
-      }
-    }
+      })
 
-    window.__setDimensions = function(widthPx, heightPx, hasMargin) {
-      return {
+    window.__setDimensions = (widthPx, heightPx, hasMargin) => ({
         width: widthPx,
         height: heightPx,
         margin: hasMargin,
@@ -585,11 +574,9 @@
           heightPx: 'number (from "px" suffix)',
           hasMargin: 'boolean (from "has" prefix)'
         }
-      }
-    }
+      })
 
-    window.__scheduleTask = function(delayMs, taskName) {
-      return {
+    window.__scheduleTask = (delayMs, taskName) => ({
         scheduled: true,
         delay: delayMs,
         task: taskName,
@@ -597,8 +584,7 @@
           delayMs: 'number (from "ms" suffix)',
           taskName: 'text (default)'
         }
-      }
-    }
+      })
 
     // Initialize DevTools
     const devtools = new ChildDevTools({
@@ -619,13 +605,13 @@
     const successCountEl = document.getElementById('success-count')
     const errorCountEl = document.getElementById('error-count')
 
-    let stats = {
+    const stats = {
       total: 0,
       success: 0,
       error: 0
     }
 
-    window.logActivity = function(message, type = 'info') {
+    window.logActivity = (message, type = 'info') => {
       const entry = document.createElement('div')
       entry.className = `log-entry ${type}`
       const time = new Date().toLocaleTimeString()
@@ -639,11 +625,11 @@
       }
     }
 
-    window.clearActivityLog = function() {
+    window.clearActivityLog = () => {
       activityLog.innerHTML = ''
     }
 
-    window.setStatus = function(status) {
+    window.setStatus = (status) => {
       if (status === 'busy') {
         statusBadge.className = 'status-badge busy executing'
         statusBadge.textContent = 'Executing...'
@@ -653,7 +639,7 @@
       }
     }
 
-    window.updateStats = function(type) {
+    window.updateStats = (type) => {
       stats.total++
       if (type === 'success') {
         stats.success++

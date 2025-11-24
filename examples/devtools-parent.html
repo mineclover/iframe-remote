@@ -257,7 +257,7 @@
       }
     }
 
-    window.quickCall = async function(fnName, args) {
+    window.quickCall = async (fnName, args) => {
       try {
         const result = await devtools.callFunction(fnName, ...args)
         showResult({

@@ -3,9 +3,22 @@
  * Automatically discovers and exposes window functions based on naming patterns
  */
 
+import type { DevToolsConfig, FunctionMetadata, ParamMetadata } from '@packages/iframe-action-types'
 import { ChildRPC, ParentRPC } from './rpc'
 import type { CommunicatorOptions } from './types'
 import type { API } from './types-rpc'
+
+// DevTools API definition
+interface DevToolsChildAPI extends API {
+  __devtools_list: () => FunctionInfo[]
+  __devtools_call: (name: string, ...args: unknown[]) => Promise<unknown>
+  __devtools_refresh: () => FunctionInfo[]
+  __devtools_get_config: () => DevToolsConfig | null
+}
+
+interface DevToolsParentAPI extends API {
+  [method: string]: (...args: unknown[]) => unknown
+}
 
 export interface DevToolsOptions extends CommunicatorOptions {
   /** Pattern to match function names (default: starts with '__') */
@@ -14,19 +27,14 @@ export interface DevToolsOptions extends CommunicatorOptions {
   includeWindowProps?: boolean
 }
 
-export interface ParamInfo {
-  name: string
-  type?: string
-}
-
 export interface FunctionInfo {
   name: string
   type: 'function' | 'asyncFunction'
-  params: ParamInfo[]
+  params: ParamMetadata[]
   paramCount: number
   description?: string
-  paramsMeta?: any[]
-  source?: string
+  returns?: string
+  examples?: string[]
 }
 
 /**
@@ -34,8 +42,8 @@ export interface FunctionInfo {
  * Automatically exposes window functions matching the pattern
  */
 export class ChildDevTools {
-  private rpc: ChildRPC<API, any>
-  private exposedFunctions: Map<string, Function> = new Map()
+  private rpc: ChildRPC<DevToolsParentAPI, DevToolsChildAPI>
+  private exposedFunctions: Map<string, (...args: never[]) => unknown> = new Map()
   private options: DevToolsOptions
 
   constructor(options: DevToolsOptions = {}) {
@@ -45,19 +53,28 @@ export class ChildDevTools {
       ...options,
     }
 
-    this.rpc = new ChildRPC({
+    this.rpc = new ChildRPC<DevToolsParentAPI, DevToolsChildAPI>({
       ...options,
     })
 
     // Register DevTools methods
     this.rpc.register('__devtools_list', () => this.listFunctions())
-    this.rpc.register('__devtools_call', (name: string, ...args: any[]) =>
-      this.callFunction(name, args)
-    )
+    this.rpc.register('__devtools_call', (name: string, ...args: unknown[]) => this.callFunction(name, args))
     this.rpc.register('__devtools_refresh', () => this.refreshFunctions())
+    this.rpc.register('__devtools_get_config', () => this.getConfig())
 
     // Initial scan
     this.refreshFunctions()
+  }
+
+  /**
+   * Get DevTools config from window.__dev_reserved
+   */
+  private getConfig(): DevToolsConfig | null {
+    if (typeof window === 'undefined') return null
+    const config = (window as { __dev_reserved?: DevToolsConfig }).__dev_reserved
+    if (!config || typeof config !== 'object') return null
+    return config
   }
 
   /**
@@ -67,7 +84,8 @@ export class ChildDevTools {
     const pattern = this.options.functionPattern
     if (pattern instanceof RegExp) {
       return pattern.test(name)
-    } else if (typeof pattern === 'function') {
+    }
+    if (typeof pattern === 'function') {
       return pattern(name)
     }
     return /^__/.test(name)
@@ -76,25 +94,23 @@ export class ChildDevTools {
   /**
    * Scan window object for matching functions
    */
-  private scanWindowFunctions(): Map<string, Function> {
-    const functions = new Map<string, Function>()
+  private scanWindowFunctions(): Map<string, (...args: never[]) => unknown> {
+    const functions = new Map<string, (...args: never[]) => unknown>()
 
     try {
-      const win = window as any
+      const win = window as unknown as Record<string, unknown>
 
       // Use Object.getOwnPropertyNames if includeWindowProps, otherwise use for...in
       // This avoids double iteration over enumerable properties
-      const keys = this.options.includeWindowProps
-        ? Object.getOwnPropertyNames(win)
-        : Object.keys(win)
+      const keys = this.options.includeWindowProps ? Object.getOwnPropertyNames(win) : Object.keys(win)
 
       for (const key of keys) {
         try {
           const value = win[key]
           if (typeof value === 'function' && this.matchesPattern(key)) {
-            functions.set(key, value)
+            functions.set(key, value as (...args: never[]) => unknown)
           }
-        } catch (e) {
+        } catch (_e) {
           // Skip properties that throw errors on access
         }
       }
@@ -116,7 +132,18 @@ export class ChildDevTools {
   /**
    * Extract parameters from function
    */
-  private extractParameters(fn: Function): { params: ParamInfo[]; count: number } {
+  private extractParameters(fn: (...args: never[]) => unknown): {
+    params: ParamMetadata[]
+    count: number
+  } {
+    // Check if function has __meta attached
+    const metadata = (fn as { __meta?: FunctionMetadata }).__meta
+
+    if (metadata?.params) {
+      return { params: metadata.params, count: fn.length }
+    }
+
+    // Fallback to parsing function signature
     try {
       const fnStr = fn.toString()
       // Extract parameter list from function signature
@@ -127,18 +154,18 @@ export class ChildDevTools {
       if (!paramsStr) return { params: [], count: 0 }
 
       // Parse parameters (handle default values, destructuring, etc.)
-      const params = paramsStr.split(',').map((p) => {
+      const params: ParamMetadata[] = paramsStr.split(',').map((p) => {
         // Remove default values and whitespace
         const paramName = p.trim().split('=')[0].trim()
         // Handle destructuring
         if (paramName.startsWith('{') || paramName.startsWith('[')) {
-          return { name: paramName, type: 'destructured' }
+          return { name: paramName, type: 'any' as const }
         }
-        return { name: paramName, type: 'any' }
+        return { name: paramName, type: 'any' as const }
       })
 
       return { params, count: fn.length }
-    } catch (error) {
+    } catch (_error) {
       return { params: [], count: fn.length }
     }
   }
@@ -153,7 +180,7 @@ export class ChildDevTools {
       const paramInfo = this.extractParameters(fn)
 
       // Check for metadata
-      const meta = (fn as any).__meta || {}
+      const meta = (fn as { __meta?: FunctionMetadata }).__meta || {}
 
       list.push({
         name,
@@ -161,8 +188,8 @@ export class ChildDevTools {
         params: paramInfo.params,
         paramCount: paramInfo.count,
         description: meta.description,
-        paramsMeta: meta.params || [],
-        source: this.options.debug ? fn.toString().slice(0, 200) : undefined,
+        returns: meta.returns,
+        examples: meta.examples,
       })
     })
 
@@ -172,7 +199,7 @@ export class ChildDevTools {
   /**
    * Call a function by name
    */
-  private async callFunction(name: string, args: any[]): Promise<any> {
+  private async callFunction(name: string, args: unknown[]): Promise<unknown> {
     const fn = this.exposedFunctions.get(name)
 
     if (!fn) {
@@ -180,7 +207,7 @@ export class ChildDevTools {
     }
 
     try {
-      const result = await fn(...args)
+      const result = await fn(...(args as never[]))
       return result
     } catch (error) {
       throw new Error(`Error calling ${name}: ${error instanceof Error ? error.message : String(error)}`)
@@ -190,18 +217,18 @@ export class ChildDevTools {
   /**
    * Manually expose a function
    */
-  public expose(name: string, fn: Function): void {
+  public expose(name: string, fn: (...args: never[]) => unknown): void {
     if (!this.matchesPattern(name) && this.options.debug) {
       console.warn(`Function name "${name}" doesn't match the pattern, but exposing anyway`)
     }
     this.exposedFunctions.set(name, fn)
-    ;(window as any)[name] = fn
+    ;(window as unknown as Record<string, unknown>)[name] = fn
   }
 
   /**
    * Get the underlying RPC instance for custom handlers
    */
-  public getRPC(): ChildRPC<API, any> {
+  public getRPC(): ChildRPC<DevToolsParentAPI, DevToolsChildAPI> {
     return this.rpc
   }
 
@@ -219,10 +246,10 @@ export class ChildDevTools {
  * Provides interface to call remote functions
  */
 export class ParentDevTools {
-  private rpc: ParentRPC<any, API>
+  private rpc: ParentRPC<DevToolsChildAPI, DevToolsParentAPI>
 
   constructor(targetWindow: Window, options: CommunicatorOptions = {}) {
-    this.rpc = new ParentRPC(targetWindow, options)
+    this.rpc = new ParentRPC<DevToolsChildAPI, DevToolsParentAPI>(targetWindow, options)
   }
 
   /**
@@ -235,7 +262,7 @@ export class ParentDevTools {
   /**
    * Call a function on child window
    */
-  public async callFunction<T = any>(name: string, ...args: any[]): Promise<T> {
+  public async callFunction<T = unknown>(name: string, ...args: unknown[]): Promise<T> {
     return this.rpc.call('__devtools_call', name, ...args) as Promise<T>
   }
 
@@ -247,9 +274,16 @@ export class ParentDevTools {
   }
 
   /**
+   * Get DevTools config from child window
+   */
+  public async getConfig(): Promise<DevToolsConfig | null> {
+    return this.rpc.call('__devtools_get_config') as Promise<DevToolsConfig | null>
+  }
+
+  /**
    * Get the underlying RPC instance for custom handlers
    */
-  public getRPC(): ParentRPC<any, API> {
+  public getRPC(): ParentRPC<DevToolsChildAPI, DevToolsParentAPI> {
     return this.rpc
   }
 

@@ -55,6 +55,7 @@
     "protocol"
   ],
   "dependencies": {
+    "@packages/iframe-action-types": "file:../iframe-action-types",
     "zod": "^4.1.12"
   }
 }

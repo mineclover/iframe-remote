@@ -5,12 +5,7 @@
  * to define functions with rich parameter information.
  */
 
-import type { FunctionMeta } from '../src/types-devtools'
-import {
-  createFunctionMeta,
-  validateFunctionMeta,
-  withMeta,
-} from '../src/types-devtools'
+import { createFunctionMeta, validateFunctionMeta, withMeta } from '../src/types-devtools'
 
 // ========================================
 // Example 1: Using createFunctionMeta helper
@@ -63,10 +58,7 @@ updateSettings.__meta = createFunctionMeta({
     type: 'object',
     description: '업데이트 결과',
   },
-  examples: [
-    'updateSettings("john", "john@example.com", 25)',
-    'updateSettings("alice", "alice@test.com")',
-  ],
+  examples: ['updateSettings("john", "john@example.com", 25)', 'updateSettings("alice", "alice@test.com")'],
   tags: ['settings', 'user'],
 })
 
@@ -104,11 +96,7 @@ setTheme.__meta = createFunctionMeta({
 // Example 3: Async function with rich metadata
 // ========================================
 
-async function fetchUserData(
-  userId: string,
-  includePrivate: boolean,
-  fieldsArray: string[]
-) {
+async function fetchUserData(userId: string, includePrivate: boolean, fieldsArray: string[]) {
   console.log('Fetching user data:', { userId, includePrivate, fieldsArray })
   await new Promise((resolve) => setTimeout(resolve, 500))
   return {
@@ -158,11 +146,7 @@ fetchUserData.__meta = createFunctionMeta({
 // Example 4: Function with object parameter
 // ========================================
 
-function configureNotifications(
-  enabled: boolean,
-  volumeLevel: number,
-  categoriesArray: string[]
-) {
+function configureNotifications(enabled: boolean, volumeLevel: number, categoriesArray: string[]) {
   console.log('Configuring notifications:', {
     enabled,
     volumeLevel,
@@ -239,7 +223,7 @@ const add = withMeta(
       type: 'number',
       description: '합계',
     },
-  })
+  }),
 )
 
 // Now add has __meta property with full type safety
@@ -257,10 +241,4 @@ if (typeof window !== 'undefined') {
   window.__configureNotifications = configureNotifications
 }
 
-export {
-  updateSettings,
-  fetchUserData,
-  setTheme,
-  configureNotifications,
-  add,
-}
+export { updateSettings, fetchUserData, setTheme, configureNotifications, add }

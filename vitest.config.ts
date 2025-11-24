@@ -8,8 +8,7 @@ export default defineConfig({
     include: ['src/__tests__/**/*.test.ts'],
     onUnhandledRejection: (rejection) => {
       // Ignore cleanup rejections in tests
-      if (rejection?.message?.includes('Communicator destroyed') ||
-          rejection?.message?.includes('RPC destroyed')) {
+      if (rejection?.message?.includes('Communicator destroyed') || rejection?.message?.includes('RPC destroyed')) {
         return
       }
       throw rejection
@@ -17,12 +16,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      exclude: [
-        'node_modules/',
-        'src/__tests__/',
-        'dist/',
-        'e2e/',
-      ],
+      exclude: ['node_modules/', 'src/__tests__/', 'dist/', 'e2e/'],
     },
   },
 })

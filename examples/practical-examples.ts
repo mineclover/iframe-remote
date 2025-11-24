@@ -239,12 +239,7 @@ configureServer.__meta = createFunctionMeta({
 // 7. Color + Number - 그라데이션 설정
 // ========================================
 
-function setGradient(
-  startColor: string,
-  endColor: string,
-  angle: number,
-  opacity: number
-) {
+function setGradient(startColor: string, endColor: string, angle: number, opacity: number) {
   const gradient = `linear-gradient(${angle}deg, ${startColor}, ${endColor})`
   return { gradient, opacity }
 }
@@ -295,7 +290,7 @@ function filterData(
   dateTo: string,
   minScore: number,
   includeArchived: boolean,
-  sortBy: string
+  sortBy: string,
 ) {
   return {
     filters: { category, dateFrom, dateTo, minScore, includeArchived, sortBy },

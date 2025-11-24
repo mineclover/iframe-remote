@@ -3,70 +3,62 @@
  * Bidirectional iframe communication protocol implementation
  */
 
-export { ParentCommunicator } from './parent'
 export { ChildCommunicator } from './child'
-export { ParentRPC, ChildRPC } from './rpc'
-export { ParentDevTools, ChildDevTools } from './devtools'
-
-export type {
-  Message,
-  MessageType,
-  RequestMessage,
-  ResponseMessage,
-  CommunicatorOptions,
-  PendingRequest,
-} from './types'
-
-export type {
-  API,
-  MethodName,
-  MethodHandler,
-  RPCCallMessage,
-  RPCResponseMessage,
-  RPCHandlerMap,
-  RPCCallOptions,
-  RPCCaller,
-  RPCHandler,
-} from './types-rpc'
-
-export { RPCError } from './types-rpc'
-
 export type {
   DevToolsOptions,
   FunctionInfo,
-  ParamInfo,
 } from './devtools'
-
+export { ChildDevTools, ParentDevTools } from './devtools'
+export {
+  assertValidFunctionMeta,
+  assertValidParamMeta,
+  FunctionMetaSchema,
+  isValidFunctionMeta,
+  isValidParamMeta,
+  ParamMetaSchema,
+  ParamTypeSchema,
+  validateFunctionMeta,
+  validateParamMeta,
+} from './metadata-validator'
+export { ParentCommunicator } from './parent'
+export { ChildRPC, ParentRPC } from './rpc'
 export type {
-  ParamType,
-  ParamMetaBase,
-  SelectParamMeta,
-  NumberParamMeta,
-  StringParamMeta,
-  BooleanParamMeta,
+  CommunicatorOptions,
+  Message,
+  MessageType,
+  PendingRequest,
+  RequestMessage,
+  ResponseMessage,
+} from './types'
+export type {
   ArrayParamMeta,
+  BooleanParamMeta,
   ColorParamMeta,
-  TimeParamMeta,
   DateParamMeta,
-  RangeParamMeta,
-  ParamMeta,
   FunctionMeta,
   FunctionWithMeta,
+  NumberParamMeta,
+  ParamMeta,
+  ParamMetaBase,
+  ParamType,
+  RangeParamMeta,
+  SelectParamMeta,
+  StringParamMeta,
+  TimeParamMeta,
 } from './types-devtools'
-
 export {
   createFunctionMeta,
   withMeta,
 } from './types-devtools'
-
-export {
-  validateParamMeta,
-  validateFunctionMeta,
-  assertValidParamMeta,
-  assertValidFunctionMeta,
-  isValidParamMeta,
-  isValidFunctionMeta,
-  ParamTypeSchema,
-  ParamMetaSchema,
-  FunctionMetaSchema,
-} from './metadata-validator'
+export type {
+  API,
+  MethodHandler,
+  MethodName,
+  RPCCaller,
+  RPCCallMessage,
+  RPCCallOptions,
+  RPCHandler,
+  RPCHandlerMap,
+  RPCResponseMessage,
+} from './types-rpc'
+export { RPCError } from './types-rpc'

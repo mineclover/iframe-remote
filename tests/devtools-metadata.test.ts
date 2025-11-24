@@ -2,8 +2,8 @@
  * Tests for DevTools metadata transmission
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { ChildDevTools, ParentDevTools, createFunctionMeta } from '../src/index'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { ChildDevTools, createFunctionMeta, ParentDevTools } from '../src/index'
 
 describe('DevTools Metadata', () => {
   let childDevTools: ChildDevTools
@@ -20,13 +20,7 @@ describe('DevTools Metadata', () => {
     ;(iframeWindow as any).window = iframeWindow
 
     // Define test function with metadata in iframe
-    ;(iframeWindow as any).__testFunction = function (
-      name: string,
-      age: number,
-      isActive: boolean
-    ) {
-      return { name, age, isActive }
-    }
+    ;(iframeWindow as any).__testFunction = (name: string, age: number, isActive: boolean) => ({ name, age, isActive })
     ;(iframeWindow as any).__testFunction.__meta = createFunctionMeta({
       description: 'Test function with metadata',
       params: [
@@ -59,9 +53,7 @@ describe('DevTools Metadata', () => {
     })
 
     // Define function with select parameter
-    ;(iframeWindow as any).__selectTheme = function (theme: string) {
-      return { theme }
-    }
+    ;(iframeWindow as any).__selectTheme = (theme: string) => ({ theme })
     ;(iframeWindow as any).__selectTheme.__meta = createFunctionMeta({
       description: 'Select theme',
       params: [
@@ -75,13 +67,11 @@ describe('DevTools Metadata', () => {
     })
 
     // Define function WITHOUT metadata (for auto-inference testing)
-    ;(iframeWindow as any).__autoInferred = function (
-      isEnabled: boolean,
-      maxRetries: number,
-      backgroundColor: string
-    ) {
-      return { isEnabled, maxRetries, backgroundColor }
-    }
+    ;(iframeWindow as any).__autoInferred = (isEnabled: boolean, maxRetries: number, backgroundColor: string) => ({
+      isEnabled,
+      maxRetries,
+      backgroundColor,
+    })
 
     // Initialize child DevTools in iframe context
     const ChildDevToolsClass = ChildDevTools as any

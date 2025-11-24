@@ -2,7 +2,7 @@
  * E2E tests for metadata transmission
  */
 
-import { test, expect } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 
 test.describe('Metadata Transmission', () => {
   test.beforeEach(async ({ page }) => {
@@ -18,20 +18,14 @@ test.describe('Metadata Transmission', () => {
     await page.click('text=__getUserInfo')
 
     // Check if description is shown
-    const descriptionVisible = await page
-      .locator('#function-description')
-      .isVisible()
+    const descriptionVisible = await page.locator('#function-description').isVisible()
     expect(descriptionVisible).toBe(true)
 
-    const description = await page
-      .locator('#function-description')
-      .textContent()
+    const description = await page.locator('#function-description').textContent()
     expect(description).toBeTruthy()
   })
 
-  test('should generate inputs based on parameter metadata - select type', async ({
-    page,
-  }) => {
+  test('should generate inputs based on parameter metadata - select type', async ({ page }) => {
     await page.waitForSelector('.function-item')
 
     // Click on __selectOption (has select parameter)
@@ -49,9 +43,7 @@ test.describe('Metadata Transmission', () => {
     expect(options).toContain('option1')
   })
 
-  test('should generate inputs based on parameter metadata - number with min/max', async ({
-    page,
-  }) => {
+  test('should generate inputs based on parameter metadata - number with min/max', async ({ page }) => {
     await page.waitForSelector('.function-item')
 
     // Click on __getRandomNumber (has min/max)
@@ -69,9 +61,7 @@ test.describe('Metadata Transmission', () => {
     expect(minAttr).toBeTruthy()
   })
 
-  test('should generate inputs based on parameter metadata - boolean', async ({
-    page,
-  }) => {
+  test('should generate inputs based on parameter metadata - boolean', async ({ page }) => {
     await page.waitForSelector('.function-item')
 
     // Click on __toggleFeature (has boolean parameter)
@@ -88,9 +78,7 @@ test.describe('Metadata Transmission', () => {
     expect(typeof isChecked).toBe('boolean')
   })
 
-  test('should generate inputs based on parameter metadata - color', async ({
-    page,
-  }) => {
+  test('should generate inputs based on parameter metadata - color', async ({ page }) => {
     await page.waitForSelector('.function-item')
 
     // Click on __setColor (has color parameter)
@@ -107,9 +95,7 @@ test.describe('Metadata Transmission', () => {
     expect(defaultValue).toMatch(/^#[0-9a-f]{6}$/i)
   })
 
-  test('should auto-infer types from parameter names without metadata', async ({
-    page,
-  }) => {
+  test('should auto-infer types from parameter names without metadata', async ({ page }) => {
     await page.waitForSelector('.function-item')
 
     // Click on __updateConfig (no metadata, auto-inferred)
@@ -131,9 +117,7 @@ test.describe('Metadata Transmission', () => {
     expect(await colorInput.count()).toBeGreaterThanOrEqual(1)
   })
 
-  test('should execute function with metadata-generated inputs', async ({
-    page,
-  }) => {
+  test('should execute function with metadata-generated inputs', async ({ page }) => {
     await page.waitForSelector('.function-item')
 
     // Click on __setColor

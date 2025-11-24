@@ -2,7 +2,7 @@
  * E2E tests for basic communication protocol
  */
 
-import { test, expect } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 
 test.describe('Basic Communication Protocol', () => {
   test.beforeEach(async ({ page }) => {
@@ -12,9 +12,7 @@ test.describe('Basic Communication Protocol', () => {
     await page.waitForTimeout(500)
   })
 
-  test('should establish connection between parent and child', async ({
-    page,
-  }) => {
+  test('should establish connection between parent and child', async ({ page }) => {
     // Check if parent page loaded
     await expect(page.locator('h1')).toContainText('DevTools Parent')
 
@@ -34,12 +32,8 @@ test.describe('Basic Communication Protocol', () => {
 
     // Check for expected functions
     const functionNames = await functionItems.allTextContents()
-    expect(functionNames.some((name) => name.includes('__getUserInfo'))).toBe(
-      true
-    )
-    expect(functionNames.some((name) => name.includes('__getPageData'))).toBe(
-      true
-    )
+    expect(functionNames.some((name) => name.includes('__getUserInfo'))).toBe(true)
+    expect(functionNames.some((name) => name.includes('__getPageData'))).toBe(true)
   })
 
   test('should execute function and show result', async ({ page }) => {
@@ -115,7 +109,7 @@ test.describe('Basic Communication Protocol', () => {
   test('should refresh function list', async ({ page }) => {
     await page.waitForSelector('.function-item')
 
-    const initialCount = await page.locator('.function-item').count()
+    const _initialCount = await page.locator('.function-item').count()
 
     // Click refresh button
     await page.click('#refresh-btn')

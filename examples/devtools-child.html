@@ -48,23 +48,19 @@
     import { ChildDevTools } from '../dist/index.js'
 
     // Define window functions that should be exposed
-    window.__getUserInfo = function() {
-      return {
+    window.__getUserInfo = () => ({
         name: 'Test User',
         role: 'admin',
         timestamp: Date.now()
-      }
-    }
+      })
 
-    window.__getPageData = function() {
-      return {
+    window.__getPageData = () => ({
         title: document.title,
         url: window.location.href,
-        userAgent: navigator.userAgent.slice(0, 50) + '...'
-      }
-    }
+        userAgent: `${navigator.userAgent.slice(0, 50)}...`
+      })
 
-    window.__performAction = function(action, value) {
+    window.__performAction = (action, value) => {
       console.log(`Performing action: ${action} with value:`, value)
       return {
         success: true,
@@ -74,7 +70,7 @@
       }
     }
 
-    window.__asyncOperation = async function(delay = 1000) {
+    window.__asyncOperation = async (delay = 1000) => {
       console.log(`Starting async operation (${delay}ms)...`)
       await new Promise(resolve => setTimeout(resolve, delay))
       console.log('Async operation completed!')
@@ -85,13 +81,9 @@
       }
     }
 
-    window.__add = function(a, b) {
-      return a + b
-    }
+    window.__add = (a, b) => a + b
 
-    window.__getRandomNumber = function(min = 0, max = 100) {
-      return Math.floor(Math.random() * (max - min + 1)) + min
-    }
+    window.__getRandomNumber = (min = 0, max = 100) => Math.floor(Math.random() * (max - min + 1)) + min
 
     // Initialize DevTools
     const devtools = new ChildDevTools({
