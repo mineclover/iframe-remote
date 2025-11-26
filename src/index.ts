@@ -37,3 +37,5 @@ export type {
   RPCResponseMessage,
 } from './types-rpc'
 export { RPCError } from './types-rpc'
+export { generateId, waitForIframe } from './utils'
+export type { WaitForIframeOptions } from './utils'
